@@ -1,0 +1,628 @@
+# 一、数据库介绍 
+
+百度百科的解释： 
+
+```
+数据库，简而言之可视为电子化的文件柜——存储电子文件的处所，用户可以对文件中的数据运行新增、截取、 更新、删除等操作。
+所谓“数据库”系以一定方式储存在一起、能予多个用户共享、具有尽可能小的冗余度、与应用程序彼此独立的 数据集合。
+```
+
+```
+ 数据管理系统我们称之为DBMS，DB（database）就是数据库的意义，M（manage）就是管理的意 思，S（system）就是系统的意思，其实就是英文名的首字符缩写。市场上冒出了很多优秀的数据库管 理系统，例如：mysql、oracle、db2等等，人家开发好了，你使用就行了，既然是使用别人写好的数据 库管理系统，那么我们在操作的时候，就要按照人家的规范来操作，这个规范叫做sql，我们通过这个系 统来操作数据的语句叫做sql语句。 
+
+sql语句全称为：结构化查询语言(Structured Query Language)，是一种数据库查询和程序设计语言， 用于存取数据以及查询、更新和管理关系数据库系统；同时也是数据库脚本文件的扩展名。但是注意一 点，**不同数据库系统之间的SQL不能完全相互通用**，也就是说不同种类的数据库管理系统的操作做使用 的sql是不完全相同的。 
+```
+
+# 二、数据库分类
+
+```
+目前的数据库可以分为两个大类：关系型数据库和非关系型数据库 
+```
+
+## 2.1 关系型数据库（RDBMS）
+
+关系型数据库模型是把复杂的数据结构归结为简单的二元关系（即二维表格形式，不是excel，但是和 excel的形式很像），结合下图来看一下：
+
+![image-20240529211026864](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240529211026864.png)
+
+这个表看着好乱啊，但是你细看一下，这几个表之间建立了某种关系，共享着双方的数据。这就是关 系。关系型数据库里面存数据的时候就类似这个样子的。
+
+常见的关系型数据库
+
+```
+1、oracle数据库
+Oracle前身叫SDL、由Larry Ellison和两个变成任意在1977创办，他们开发了主机的拳头产品，在市场上大量销售。Oracle公司是最早开发关系型数据库的厂商之一，其产品支持最广泛的操作系统平台。目前Oracle关系数据库产品的市场占有率数一数二 。
+Oracle公司是目前全球最大的数据库软件公司，也是近年业务增长极为迅速的软件提供与服务商 
+主要应用范围：传统大企业、大公司、政府、金融、证券等。 
+版本升级：oracle8i，oracle9i，oracle10g，oracle11g，oracle12c
+
+2、MySQL:商业版和社区版
+DBA：数据库管理员，运维MySQL被广泛的应用在Internet上的大中小型网站中。由于体积小、速度快、总体拥有成本低，开放源
+代码
+
+3、MariaDB数据库
+MariaDB数据库管理系统是MySQL数据库的一个分支，主要由开元社区维护，采用GPL授权许可。开发这个MariaDB的原因之一是：甲骨文公司收购了MySQL后，有MySQL闭源的潜在风险，因此MySQL开元社区采用分支的方式来避开这个风险。 
+
+4、SQL Server数据库
+Microsoft SQL Server是微软公司开发的大型关系数据库系统。SQL Server的功能比较全面，效率高，可以作为中型企业或单位的数据库平台。SQL Server可以与Winodws操作系统紧密集成，不论是应用程序开发速度还是系统事务处理运行速度，都得到较大的提升，对于在Windows平台上开发的各种企业级信息管理系统来说，不论是C/S（客户机/服务器）架构还是B/S（浏览器/服务器）架构。SQL Server都是一个很好的选择。SQL Server的缺点是只能在Windows系统下运行，简称Mssql
+
+ 5、Access数据库
+Access是入门级小型桌面数据库，性能安全性都很一般，可供个人管理或小型企业只用 可以方便地生成各种数据对象，利用存储的数据建立窗体和报表 作为Office套件的一部分，可以与Office集成，实现无缝连接 Access主要适用于中小企业应用系统，或作为客户机/服务器系统中的客户端数据库。
+
+6、sqlite：
+SQLite，是一款轻小型的数据库，一般测试一些功能的时候，会使用一下，但是这个数据库不支持多用户远程连接，性能不高，所以很少用在生产上。
+
+7、PostgreSQL：
+MySQL与PostgreSQL都是免费、开源、强大、且功能丰富的数据库，PostgreSQL标榜自己是世界上最先进的开源数据库，很多企业也都喜欢用这个数据库。
+
+6、其他不常用关系型数据库
+DB2、Informix、Sybase等。这些关系型数据库逐步的淡化了普通运维的实现，特别是互联网公司几乎见不到
+```
+
+## 2.2 非关系型数据库
+
+非关系型数据库也被成为NoSQL数据库，NOSQL的本意是"Not Only SQL"。 
+
+NoSQL的产生并不是要彻底地否定关系型数据库，而是作为传统关系型数据库的一个有效补充。NOSQL 数据库在特定的场景下可以发挥出难以想象的高效率和高性能。 随着互联网Web2.0网站的星期，传统 的关系型数据库在应付web2,0网站，特别是对于规模日益扩大的海量数据，超大规模和高并发的微博、 微信、SNS类型的web2.0纯动态网站已经显得力不从心，暴露了很多难以克服的问题。
+
+```
+1、memcached
+ Memcaced是一个开源的、高性能的、具有分布式内存对象的缓存系统。通过它可以减轻数据库负载，加
+速动态的web应用，最初版本由LiveJoumal 的Brad Fitzpatrick在2003年开发完成。目前全球有非常多
+的用户都在使用它来架构主机的大负载网站或提升主机的高访问网站的响应速度。
+　　官网：http://memcached.org/ 
+　　由于memcached为纯内存缓存软件。但是最近几年逐渐被其他的可以持久化产品替代如Redis。
+　　
+2、Redis
+和Memcached类似。但redis支持的存储value类型相对更多，包括string（字符串）、list（链
+表）、set（集合）和zset（有序集合）等。
+　　它提供了Python、Ruby、Erlang、PHP客户端，使用方便。 
+　　官方：http://www.redis.io/documentation 
+redis特点： 
+1）支持内存缓存
+2）支持持久化存储
+3）数据库类型更丰富
+4）支持主从集群、分布式 
+5）支持队列等特殊功能 
+　　应用：缓存从存取memcached更改存取redis
+
+3、MongoDB（Document-oriented）
+MongoDB是一个介于关系型数据库和非关系型数据库之间的产品，是非关系型数据库当中功能最丰富，最
+像关系数据库的。
+　　特点： 
+　　　　高性能、易部署、易使用、存储数据非常方便 
+　　　　
+4、Cassandra
+Apache Cassndra是一套开源分布式存储系统。它最初由Facebook开发，用于存储特别大的数据。Facebook目前在使用此系统。 
+ 
+5、其他不常用非关系型数据库
+	HBase、MemcacheDB、BerkeleyDB、Tokyo Cabinet\Tokyo Tyrant（ttserver） 
+	ttserver 持久化输出，缺点存储2千万条 性能下降（由日本人发明）
+```
+
+# 三、MySQL安装
+
+```
+#centos7默认安装的是MariaDB-5.5.68或者65，
+#查看版本的指令：[root@web01 bbs]# rpm -qa| grep mariadb
+
+#安装mariadb的最新版，只是更新了软件版本，不会删除之前原有的数据。
+#修改yum源的配置文件
+vim /etc/yum.repos.d/mariadb.repo
+i[mariadb]
+name=mariadb laster version
+baseurl=http://mirrors.tuna.tsinghua.edu.cn/mariadb/yum/10.6/centos7-amd64/
+gpgcheck=0
+
+#yum安装mariadb
+yum install mariadb-server -y
+
+#重新启动mariadb并设置开机自启
+systemctl start mariadb
+systemctl enable mariadb
+# 安装完之后建议运行一下安全初始化的动作：mysql_secure_installation
+
+#验证
+mysql  
+MariaDB [(none)]> show databases;
+ +--------------------+
+ | Database           |
+ +--------------------+
+ | information_schema |
+ | mysql              |
+ | performance_schema |
+ | song               |
+ +--------------------+
+ 4 rows in set (0.000 sec)
+```
+
+安装mysql 5.7社区版
+
+```bash
+#编辑mysql社区版的yum源
+vim /etc/yum.repos.d/mysql-community.repo
+[mysql-connectors-community]
+name=MySQL Connectors Community
+baseurl=https://mirrors.tuna.tsinghua.edu.cn/mysql/yum/mysql-connectors
+community-el7-$basearch/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.mysql.com/RPM-GPG-KEY-mysql
+[mysql-tools-community]
+name=MySQL Tools Community
+baseurl=https://mirrors.tuna.tsinghua.edu.cn/mysql/yum/mysql-tools-community
+el7-$basearch/
+enabled=1
+ gpgcheck=1
+ gpgkey=https://repo.mysql.com/RPM-GPG-KEY-mysql
+ [mysql-5.6-community]
+ name=MySQL 5.6 Community Server
+ baseurl=https://mirrors.tuna.tsinghua.edu.cn/mysql/yum/mysql-5.6-community el7-$basearch/
+ enabled=1
+ gpgcheck=1
+ gpgkey=https://repo.mysql.com/RPM-GPG-KEY-mysql
+ 
+ [mysql-5.7-community]
+ name=MySQL 5.7 Community Server
+ baseurl=https://mirrors.tuna.tsinghua.edu.cn/mysql/yum/mysql-5.7-community
+el7-$basearch/
+ enabled=1
+ gpgcheck=1
+ gpgkey=https://repo.mysql.com/RPM-GPG-KEY-mysql
+
+[mysql-8.0-community]
+ name=MySQL 8.0 Community Server
+ baseurl=https://mirrors.tuna.tsinghua.edu.cn/mysql/yum/mysql-8.0-community
+el7-$basearch/
+ enabled=0
+gpgcheck=1
+ gpgkey=https://repo.mysql.com/RPM-GPG-KEY-mysql
+
+
+#yum安装
+yum install mysql-community-server -y
+#启动mysql
+systemctl start mysqld
+systemctl enable mysqld
+
+#查看mysql 5.7初始密码
+vim /var/log/mysqld.log
+2021-10-11T01:58:56.929837Z 1 [Note] A temporary password is generated for 
+root@localhost: ps-->YUH95ri
+#登录mysql
+mysql -uroot -p'ps-->YUH95ri'
+#安全初始化，新版本10.6的mariadb不支持这个用法了。
+#mysql_secure_installation
+复杂密码参考：123@qq.COM
+```
+
+四、 MySQL 基础管理
+
+数据库的操作单元：
+
+```
+库
+表
+列
+记录(行数据)
+```
+
+#### 基础操作
+
+```bash
+#查看数据库
+show databases;
+
+#创建数据库：CREATE DATABASE 数据库名 charset utf8;
+create database wordpress;
+
+#删除数据库
+drop database wordpress;
+
+#切换数据库
+use mysql
+
+#查看表
+show tables;
+
+
+#删除表
+drop  table 表名;
+
+#查看表结构
+desc 表名
+
+#查看所有数据
+select * from user;
+ 
+#查询指定列的数据
+select user,host,Password from user;
+
+#查询指定列的数据的头3h
+ select user,host,Password from user limit 3 ;
+
+
+#授权 ，默认情况下mysql和mariadb都是不允许root用户远程连接登录的。
+# grant 操作(增删改查，all) on 库名.表名  to 用户名@'%'  identified by '密码';
+grant all on *.* to root@'192.168.61.%' identified by '123456';
+grant all on wordpress.* to wordpress@'192.168.61.%' identified by '123456';
+grant all on wordpress.t1 to jaden@'192.168.61.%' identified by '123';  #jaden用户只能对menu表进行操作
+# 网站代码中连接数据库的时候使用的是哪个用户，那个用户有什么权限，那么网站代码就能对数据库做什么操作。
+
+# 单独创建用户
+create user wang@'%' identified by '123';
+# 单独创建的用户是没有任何权限的，只能登录，需要授权
+grant all on wordpress.* to wang@'%';
+# 上面两条就等于我们前面授权加创建用户的一条指令。
+# 删除用户
+drop user wang@'%';
+
+ # 查看用户的权限
+show grants for jaden@'192.168.61.%';
+ # 回收权限： 注意：只有在本机登录的root用户才有这个能力
+revoke select on wordpress.t1 from jaden@'192.168.61.%'; 
+show grants for jaden@'192.168.61.%';
+
+#使用普通用户登录
+mysql -u wordpress -p123456 -h 10.0.0.7
+#默认的数据文件存储位置是
+/var/lib/mysql/
+ #/root/.mysql_history  记录了我们做的历史sql指令
+
+# 修改用户密码
+#安全初始化，可以修改root用户的密码：mysql_secure_installation，新版本10.6不支持这个功能
+了。
+
+格式：mysql> set password for 用户名@localhost = password('新密码'); 
+例子：mysql> set password for root@localhost = password('123'); 
+# 查询当前是在哪个库里面
+MariaDB [mysql]> select database();
+```
+
+
+
+# 五、 MySQL 数据类型
+
+```mysql
+int    整形 数字   适合存储：年龄， 加减运算
+float  浮点型      适合存储：余额  加减运算
+char   字符串     适合存储：不做加减运算 身份号码 密码，单行信息
+text   文本       适合存储： 适合多行信息，小说，商品描述
+enum   枚举       适合存储： 固定选项，多选一
+date   日期类型    适合存储：时间，一般存储的是unix时间戳，从1970.1.1 0:0:0到现在过了多少
+秒，这个时间戳是可以转化为具体的时间日期的。
+boolen  布尔类型   true/false 对应数字就是0/非0
+```
+
+#### 所有的整型int
+
+```
+类型名称			说明					存储需求
+TINYINT			很小的整数				1个字节
+SMALLINT		小的整数				 2个字节
+MEDIUMINT		中等大小的整数		   		3个字节
+INT (INTEGHR)	普通大小的整数				4个字节
+BIGINT			大整数					8个字节
+```
+
+#### 字符串类型
+
+```
+类型			大小					用途 
+CHAR(10) 		0-255 			bytes定长字符串 
+VARCHAR(10) 	0-65535 		bytes变长字符串
+```
+
+#### 所有的文本text类型
+
+```
+类型名称			说明			长度
+TINYTEXT		  极小的		  255字节
+TEXT			 普通的		 65535字节
+MEDIUMTEXT		 中等的		 16M字节
+LONGTEXT         极长的          4G字节
+```
+
+# 六、 MySQL完整性约束
+
+```
+not null  # 不能为空，默认是可以为空的
+
+default   # default 100，意思是默认值为100
+
+unique   # 唯一
+
+auto_increment # 自增
+
+primary key  #主键：not null+unique，还自带auto_increment自增属性，但是每个表里面只能有
+一列能为primary key主键列
+
+unsigned  #只能存正整数，默认是可以存正数和负数的
+```
+
+# 七、MySQL 数据表的操作
+
+```mysql
+#切换库
+use linux;
+
+#创建表 #每个web项目其实都会创建很多个表来存储不同的数据
+create table 表名(
+字段名1 类型[(宽度) 约束条件],
+字段名2 类型[(宽度) 约束条件],
+字段名3 类型[(宽度) 约束条件]);
+示例：
+mysql> create table jaden(  -> id int, -> name varchar(50),-> age int(3)-> );
+#查看一下mysql帮我们创建表的时候的详细指令
+#show create table jaden;
+#创建库和创建表的时候还可以指定字符集编码，默认字符集是Latin。
+#DEFAULT CHARACTER SET utf8mb4
+#create table jaden(id int, name varchar(50)) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+# ENGINE=MyISAM这是指定存储引擎，这个后面说。
+
+
+#往表里面插入数据
+insert into jaden(id,name,age) value(1,'xx',18); # 插入单条数据
+insert into jaden(id,name,age) values(2,'xx2',15),(3,'xx3',19); #插入多条数据
+
+#创建只有name列的表t1;
+create table t1(name char(6));
+#查看表结构
+desc t1;
+
+#往表t1插入数据
+insert t1 value('zhang');
+insert t1 value('li');
+
+#查询t1表中所有数据
+select * from t1;
+
+#指定字符集的创表语句
+create table t2(name char(6),age int(3)) default charset=utf8;
+
+#往表t2插入数据
+insert t2 value('张三',20);
+insert t2 value('李四',60);
+
+#创建表t4
+ create table t4(name char(6),age int(3) default 0 ) default charset=utf8;
+
+#指定列插入数据
+insert t4(name) values('张三'),('李四');
+
+#查询结果
+mysql> select * from t4;
+ +--------+------+
+ | name   | age  |
+ +--------+------+
+ | 张三   |    
+0 |
+ | 李四   |    
+0 |
+ +--------+------+
+ 2 rows in set (0.00 sec)
+
+								##修改表
+#修改字段的长度
+alter table s2 modify name char(10);
+
+ #查看创表语句
+show create table  s2;
+
+ #增加字段
+alter table s2 add age int(3);
+
+ #删除字段
+alter table s2 drop age;
+
+#ALTER TABLE 表名 ADD 字段名  数据类型 [完整性约束条件…]  FIRST; #添加这个字段的时候，把它放到第一个字段位置去。
+#ALTER TABLE 表名 ADD 字段名  数据类型 [完整性约束条件…]  AFTER 字段名;#after是放到后的这个字段的后面去了，我们通过一个first和一个after就可以将新添加的字段放到表的任意字段位置了。
+# 修改表的字符集
+alter table 表名 charset=utf8mb4;
+
+#使用where条件删除单条数据
+delete from t5  where name='zhangsan';
+#删除所有数据
+delete from t5;
+
+
+#单条件修改：
+update t5 set password='123' where name='wangwu';
+#单条件修改多列：
+update t5 set password='123',name='xxx' where name='wangwu';
+#多条件修改
+update t5 set password='123' where name='wangwu' and id=1;
+update t5 set password='123' where name='wangwu' or id=1;
+#修改所有数据
+update t5 set password='123456';
+```
+
+**总结**
+
+```
+行数据的增删改查
+insert
+delete
+update
+select
+```
+
+八、MySQL 查询数据
+
+```mysql
+[root@localhost ~]# ls
+anaconda-ks.cfg  world.sql
+[root@localhost ~]# mysql < world.sql 
+
+
+#sql查询
+city有哪些中国的城市？ #注意，字符串数据外层都是有引号，比如'CHN'，单引号或者双引号都行，必须闭合。
+select * from city where CountryCode='CHN';
+查询city表中，山西省的城市名？ # 单条件查询
+select * from city where district='shanxi';
+查询city表中，以shan开头的省份的城市名，like是像的意思，like后面可以使用通配符%
+ select * from city where district like 'shan%'; #shan%、%shan%、%shan
+查询city表中，山西省和河北省的城市名？# 多条件查询
+select * from city where district='shanxi' or district='hebei' ;
+查询city表中，山西省和河北省的城市中人口大于100w的城市？ # 下面为什么加括号，是因为and的优先级比or高
+select * from city where (district='shanxi' or district='hebei') and Population 
+>1000000 ;
+查询city表中，要求只显示城市名和人口数量，山西省和河北省的城市名按人口数量排序，升序？
+select Name,Population from city where district='shanxi' or district='hebei' 
+order by Population ;
+查询city表中，要求只显示城市名和人口数量，山西省和河北省的城市名按人口数量排序，降序？
+select Name,Population from city where district='shanxi' or district='hebei' 
+order by Population desc ;
+
+查询city表中，要求只显示城市名和人口数量，山西省和河北省的城市名按人口数量前5名；
+select Name,Population from city where district='shanxi' or district='hebei' 
+order by Population desc limit 5;
+查询city表中，要求只显示城市名和人口数量，山西省和河北省的城市名按人口数量第2名和第3名；
+select Name,Population from city where district='shanxi' or district='hebei' 
+order by Population desc limit 1,2;
+
+查询city表中,所有中国省份中带an的城市
+select * from city where countrycode='chn' and district like '%an%' ;
+查询city表中，所有中国的城市人口在89000和89999之间的城市
+select * from city where countrycode='chn' and  Population  between 89000 and 
+89999 ;
+# 等同于：select * from city where countrycode='chn' and  population > 89000 and 
+population < 90000;
+
+
+#下面两个自己写昂
+#查询city表中，要求只显示城市名和人口数量,查询CHN人口最多的前5个城市？
+#查询city表中，要求只显示城市名和人口数量,查询CHN人口最少的前5个城市？
+# 一些mysql内置的函数，有特定的功能：count、as、sum、group_concat、concat等等
+查询中国的城市数量？
+select count(name) as 中国城市总数 from city where countrycode='CHN';
+查询世界的国家数量？
+select count(name) from country;
+查询中国的总人口？
+select sum(population) from city where countrycode='chn';
+把多行合并成一行
+select group_concat(name) from city where countrycode='chn' and district='hebei' ;
+把多列合并成一列
+select concat(Name,"#",CountryCode,"#",District) from city where 
+countrycode='chn' and district='hebei' ;
+```
+
+# 九、 MySQL 索引
+
+**作用：加快sql语句的查询速度，但是数据的写入速度会降低，但是项目的操作大多数都是读多写少，其 实与安全关系不是很大，简单看看效果即可，先导入一些数据**
+
+```mysql
+[root@localhost ~]# ls
+ anaconda-ks.cfg  t100w.sql  world.sql
+[root@localhost ~]# mysql < t100w.sql
+[root@localhost ~]# mysql
+MariaDB [test]> desc t100w;
+MariaDB [test]> select * from t100w where k1='Sb' and k2='56KL';
+ +--------+--------+------+------+---------------------+
+ | id     | num    | k1   | k2   | dt                  |
+ +--------+--------+------+------+---------------------+
+ | 136944 | 179143 | Sb   | 56KL | 2019-08-12 11:42:50 |
+ | 153551 | 184221 | Sb   | 56KL | 2019-08-12 11:43:01 |
+ | 545152 | 171665 | Sb   | 56KL | 2019-08-12 11:47:39 |
+ | 884019 | 166702 | Sb   | 56KL | 2019-08-12 11:51:52 |
+ | 980583 | 203584 | Sb   | 56KL | 2019-08-12 11:53:02 |
+ | 999993 | 162039 | Sb   | 56KL | 2019-08-12 11:53:17 |
+ +--------+--------+------+------+---------------------+
+ 6 rows in set (0.337 sec)
+
+# 添加索引看效果
+# alter table t100w add index lianhe(k1,k2);
+MariaDB [test]> alter table t100w add index lianhe(k1,k2);
+Query OK, 0 rows affected (1.272 sec)               
+Records: 0  Duplicates: 0  Warnings: 0
+
+MariaDB [test]> select * from t100w where k1='Sb' and k2='56KL';
+ +--------+--------+------+------+---------------------+
+ | id     | num    | k1   | k2   | dt                  |
+ +--------+--------+------+------+---------------------+
+ | 136944 | 179143 | Sb   | 56KL | 2019-08-12 11:42:50 |
+ | 153551 | 184221 | Sb   | 56KL | 2019-08-12 11:43:01 |
+ | 545152 | 171665 | Sb   | 56KL | 2019-08-12 11:47:39 |
+ | 884019 | 166702 | Sb   | 56KL | 2019-08-12 11:51:52 |
+ | 980583 | 203584 | Sb   | 56KL | 2019-08-12 11:53:02 |
+ | 999993 | 162039 | Sb   | 56KL | 2019-08-12 11:53:17 |
+ +--------+--------+------+------+---------------------+
+6 rows in set (0.001 sec)
+
+# 索引的原理：其实就是加了个目录，就像字典一样。
+```
+
+**测试**
+
+```mysql
+#创建表的时候，指定索引
+create table zhu2(id int(8) primary key AUTO_INCREMENT ,name char(10),passwd char(10));
+# create table 表名9(id int,name char(10),primary key(id)); 
+
+#增加主键索引(要求结果唯一，而且必须要有一个主键列)
+alter table t100w add PRIMARY KEY(id); # 创建表之后再添加主键索引
+
+#创建普通索引
+alter table t100w add index num_index(num);  #num_index索引名字，num是列名
+
+#创建联合索引
+alter table t100w add index lianhe(k1,k2);
+
+ # 唯一索引
+create table t2(id int, title char(10) unique);
+
+#查看索引
+# desc t100w;  #MUL普通索引、PRI主键索引
+show index from t100w;
+
+#删除普通索引
+alter table  t100w  drop index lianhe;
+
+#删除主键索引
+alter table  t100w  drop  PRIMARY key;
+```
+
+# 十、MySQL UNION 联合查询
+
+```mysql
+#合并两个select查询结果，我创建个c1和c2表来演示吧，去其他表里面拿一些数据放到c1和c2表里面
+CREATE TABLE `c1` (
+ `ID` int NOT NULL AUTO_INCREMENT,
+ `Name` char(35) NOT NULL DEFAULT '',
+ `District` char(20) NOT NULL DEFAULT '',
+ `Population` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`ID`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ 
+ CREATE TABLE `c2` (
+ `ID` int NOT NULL AUTO_INCREMENT,
+ `Name` char(35) NOT NULL DEFAULT '',
+ `District` char(20) NOT NULL DEFAULT '',
+ `Population` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`ID`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ 
+# 把查询出来的结果插入到c1表中
+insert into c1(ID,Name,District,Population)  select ID,Name,District,Population 
+from city where CountryCode='CHN' and District='Hebei';
+
+# 把查询出来的结果插入到c2表中
+insert into c2(ID,Name,District,Population)   select ID,Name,District,Population 
+from city where CountryCode='CHN' and District='Henan';
+
+# 但是注意，union要求前后查询数据的列数必须相同才可以，不然会报错
+select * from c1 union select * from c2 order by Population;
+
+#sql注入漏洞检测中经常会使用的
+select * from c1 union select 1,2,3,user();
+```
+
+# 十一、mysql存储引擎
+
+**这个内容是了解内容，不同的引擎组织存储数据的时候，底层实现原理和磁盘控制有不同的方式，而且 各有优劣，看自己的实际使用场景而定。**
+
+```mysql
+MyISAM： 读性能好，写的性能差     每张表，三个文件
+innodb： 读性能微弱，写的性能好   每张表，两个文件
+# create table c3(id int,name char(10)) ENGINE=myisam default charset=utf8mb4;
+```

